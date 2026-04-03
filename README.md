@@ -19,18 +19,10 @@ An AI-powered platform for spatial omics analysis with multi-format support, int
 pip install stat-agent
 ```
 
-With all optional dependencies:
+With analysis skill dependencies (squidpy, scvi-tools, etc.):
 
 ```bash
-pip install "stat-agent[all]"
-```
-
-Or install specific extras:
-
-```bash
-pip install "stat-agent[web]"      # Flask web interface
-pip install "stat-agent[llm]"      # LLM providers
-pip install "stat-agent[skills]"   # Analysis skill dependencies
+pip install "stat-agent[skills]"
 ```
 
 ## Quick Start

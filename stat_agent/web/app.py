@@ -37,7 +37,12 @@ except ImportError as e:
     SpatialAgent = None
 
 # Create Flask app
-app = Flask(__name__)
+_WEB_DIR = Path(__file__).parent
+app = Flask(
+    __name__,
+    template_folder=str(_WEB_DIR / "templates"),
+    static_folder=str(_WEB_DIR / "static"),
+)
 app.config['SECRET_KEY'] = 'spatial-agent-secret-key'
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching for development
 

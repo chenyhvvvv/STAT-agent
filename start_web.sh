@@ -40,4 +40,4 @@ JUPYTER_PID=$!
 trap "kill $JUPYTER_PID 2>/dev/null; exit" INT TERM EXIT
 
 # Start Flask app (foreground)
-python3 web_interface.py --host 0.0.0.0 --port ${FLASK_PORT} --jupyter-port ${JUPYTER_PORT}
+python3 -m stat_agent.web.app --host 0.0.0.0 --port ${FLASK_PORT} --jupyter-port ${JUPYTER_PORT}

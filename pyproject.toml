@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stat-agent"
-version = "0.1.0"
+version = "0.1.1"
 description = "STAT: Spatial Transcriptomics Analytical agenT - AI-powered platform for spatial omics analysis"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -33,14 +33,14 @@ classifiers = [
 ]
 
 dependencies = [
-    # Core data
+    # Data
     "numpy>=1.21",
     "pandas>=1.3",
     "anndata>=0.9",
     "scipy>=1.7",
     "scanpy>=1.9",
 
-    # Spatial geometry
+    # Spatial
     "geopandas>=0.10",
     "shapely>=2.0",
 
@@ -52,24 +52,19 @@ dependencies = [
     "matplotlib>=3.5",
     "seaborn>=0.11",
 
+    # Web
+    "flask>=3.0",
+
+    # LLM providers
+    "anthropic>=0.18",
+    "openai>=1.12",
+
     # Config
     "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
-# LLM providers
-llm = [
-    "anthropic>=0.18",
-    "openai>=1.12",
-    "google-generativeai>=0.3",
-]
-
-# Web interface
-web = [
-    "flask>=3.0",
-]
-
-# Skill dependencies (for specific analysis skills)
+# Analysis skill dependencies (heavy bio packages)
 skills = [
     "squidpy>=1.2",
     "gseapy>=1.0",
@@ -79,18 +74,12 @@ skills = [
 # Development
 dev = [
     "pytest>=7.0",
-    "pytest-cov>=4.0",
     "pytest-asyncio>=0.23",
     "ruff>=0.1",
 ]
 
-# All optional dependencies
-all = [
-    "stat-agent[llm,web,skills,dev]",
-]
-
 [project.scripts]
-stat-web = "web_interface:main"
+stat-web = "stat_agent.web.app:main"
 
 [project.urls]
 Homepage = "https://github.com/chenyhvvvv/STAT-agent"
@@ -104,6 +93,7 @@ exclude = ["tests*", "docs*", "external*", "paper*", "examples*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.md", "*.yaml", "*.yml"]
+"stat_agent.web" = ["templates/**/*", "static/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
