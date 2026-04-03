@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STAT - Spatial Transcriptomics Analysis</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Init Overlay -->
+  <div id="init-overlay">
+    <div class="init-card">
+      <div class="init-logo">STAT</div>
+      <p class="init-subtitle">Spatial Transcriptomics Analysis Tool</p>
+
+      <form id="init-form">
+        <div class="form-group">
+          <label for="dataset-dir">Dataset Directory</label>
+          <input type="text" id="dataset-dir" name="dataset_dir" placeholder="/path/to/dataset" required>
+        </div>
+        <div class="form-group">
+          <label for="session-name">Session Name</label>
+          <input type="text" id="session-name" name="session_name" value="web_session" placeholder="web_session">
+        </div>
+
+        <details class="llm-config">
+          <summary>LLM Configuration</summary>
+          <div class="llm-config-body">
+            <div class="form-group">
+              <label for="api-key">API Key</label>
+              <input type="password" id="api-key" name="api_key" placeholder="sk-...">
+            </div>
+            <div class="form-group">
+              <label for="model">Model</label>
+              <input type="text" id="model" name="model" placeholder="gpt-4o">
+            </div>
+            <div class="form-group">
+              <label for="base-url">Base URL <span class="optional">(optional)</span></label>
+              <input type="text" id="base-url" name="base_url" placeholder="https://api.openai.com/v1">
+            </div>
+            <div class="form-row">
+              <button type="button" id="test-llm-btn" class="btn-secondary">Test Connection</button>
+              <span id="test-llm-result"></span>
+            </div>
+          </div>
+        </details>
+
+        <button type="submit" id="init-submit-btn" class="btn-primary">Load Dataset</button>
+        <div id="init-error" class="error-msg hidden"></div>
+        <div id="init-loading" class="loading-msg hidden">Loading dataset...</div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app" class="hidden">
+    <header id="app-header">
+      <div class="header-left">
+        <span class="header-logo">STAT</span>
+        <span id="session-info" class="session-info"></span>
+      </div>
+      <nav class="header-nav">
+        <button id="notebook-btn" class="btn-header" title="Open Jupyter Notebook">Notebook</button>
+      </nav>
+    </header>
+
+    <main class="main-layout">
+      <!-- Left: Spatial Viewer -->
+      <section class="spatial-viewer">
+        <div class="canvas-container" id="canvas-container">
+          <canvas id="spatial-canvas"></canvas>
+          <div id="canvas-spinner" class="canvas-spinner hidden">
+            <div class="spinner"></div>
+            <span>Loading...</span>
+          </div>
+        </div>
+        <div class="viewer-toolbar">
+          <div class="toolbar-left">
+            <button id="zoom-in-btn" class="btn-tool" title="Zoom In">+</button>
+            <button id="zoom-out-btn" class="btn-tool" title="Zoom Out">&minus;</button>
+            <button id="zoom-fit-btn" class="btn-tool" title="Fit to View">Fit</button>
+            <span id="zoom-level" class="toolbar-info">100%</span>
+          </div>
+          <div class="toolbar-center">
+            <span class="toolbar-label">Opacity</span>
+            <input type="range" id="opacity-slider" min="5" max="100" value="80" class="toolbar-slider" title="Cell overlay opacity">
+            <span class="toolbar-sep"></span>
+            <span class="toolbar-label">Size</span>
+            <input type="range" id="size-slider" min="20" max="300" value="100" class="toolbar-slider" title="Point size">
+            <span class="toolbar-sep"></span>
+            <label class="toolbar-checkbox" title="Hide background image"><input type="checkbox" id="hide-bg-cb"><span class="toolbar-label">Hide BG</span></label>
+          </div>
+          <div class="toolbar-right">
+            <span id="cursor-coords" class="toolbar-info"></span>
+            <span id="cell-count-info" class="toolbar-info"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Center: Controls -->
+      <div class="resize-handle resize-handle-left" id="resize-left"></div>
+
+      <section class="controls-panel">
+        <!-- Slice Selector -->
+        <div class="control-group" id="slice-group">
+          <div class="control-label">Slices</div>
+          <div id="slice-tabs" class="slice-tabs"></div>
+        </div>
+
+        <!-- Modality Toggle -->
+        <div class="control-group hidden" id="modality-group">
+          <div class="control-label">Modality</div>
+          <div id="modality-toggle" class="segmented-control">
+            <button class="seg-btn active" data-modality="gene">Gene</button>
+            <button class="seg-btn" data-modality="protein">Protein</button>
+          </div>
+        </div>
+
+        <!-- Visualization Mode -->
+        <div class="control-group" id="viz-group">
+          <div class="control-label">Visualization</div>
+          <div id="viz-mode" class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="viz-mode" value="celltype" checked>
+              <span>Cell Types</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="viz-mode" value="gene">
+              <span>Gene Expression</span>
+            </label>
+            <label class="radio-option" id="proportion-option">
+              <input type="radio" name="viz-mode" value="proportion" disabled>
+              <span>Proportions</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Proportion Celltype Selector -->
+        <div class="control-group hidden" id="proportion-ct-group">
+          <div class="control-label">Proportion View</div>
+          <select id="proportion-ct-select" class="proportion-select">
+            <option value="">Pie Chart (all types)</option>
+          </select>
+        </div>
+
+        <!-- Gene Search -->
+        <div class="control-group hidden" id="gene-search-group">
+          <div class="control-label">Gene</div>
+          <div class="search-wrapper">
+            <input type="text" id="gene-search" placeholder="Search gene..." autocomplete="off">
+            <div id="gene-autocomplete" class="autocomplete-dropdown hidden"></div>
+          </div>
+          <div id="gene-info" class="small-info"></div>
+        </div>
+
+        <!-- Colorbar & Vmax Control (gene/proportion mode) -->
+        <div class="control-group hidden" id="colorbar-group">
+          <div class="control-label">Color Scale</div>
+          <div id="colorbar-display" class="colorbar-display">
+            <div id="colorbar-bar" class="colorbar-bar"></div>
+            <div class="colorbar-labels">
+              <span id="colorbar-min">0</span>
+              <span id="colorbar-max">1</span>
+            </div>
+          </div>
+          <div class="vmax-control">
+            <label class="small-info">Max value</label>
+            <input type="range" id="vmax-slider" min="0" max="100" value="100" class="vmax-slider">
+            <span id="vmax-value" class="small-info" style="font-family:var(--font-mono)">auto</span>
+          </div>
+        </div>
+
+        <!-- Celltype Filters -->
+        <div class="control-group" id="celltype-group">
+          <div class="control-label">
+            <span>Cell Types</span>
+            <div class="control-actions">
+              <button id="ct-select-all" class="btn-tiny">All</button>
+              <button id="ct-select-none" class="btn-tiny">None</button>
+            </div>
+          </div>
+          <div id="celltype-checkboxes" class="checkbox-list"></div>
+          <div id="no-celltype-msg" class="small-info hidden">No celltype annotations available</div>
+        </div>
+
+        <!-- ROI Tools -->
+        <div class="control-group" id="roi-group">
+          <div class="control-label">Regions of Interest</div>
+          <div class="roi-toolbar">
+            <button id="roi-bbox-btn" class="btn-tool" title="Draw Rectangle ROI">Rect</button>
+            <button id="roi-polygon-btn" class="btn-tool" title="Draw Polygon ROI">Poly</button>
+            <button id="roi-freehand-btn" class="btn-tool" title="Draw Freehand ROI">Free</button>
+            <button id="roi-cancel-btn" class="btn-tool btn-danger hidden" title="Cancel Drawing">Cancel</button>
+          </div>
+          <div id="roi-list" class="roi-list"></div>
+        </div>
+
+        <!-- Data Info -->
+        <div class="control-group" id="data-info-group">
+          <div class="control-label">Data Info</div>
+          <div id="data-info" class="small-info"></div>
+        </div>
+      </section>
+
+      <!-- Right: Chat Panel -->
+      <div class="resize-handle resize-handle-right" id="resize-right"></div>
+
+      <section class="chat-panel">
+        <div class="chat-header">
+          <span>Agent Chat</span>
+          <button id="save-chat-btn" class="btn-tiny" title="Save chat as HTML">Save</button>
+        </div>
+        <div id="chat-messages" class="chat-messages">
+          <div class="chat-welcome">
+            <p>Ask questions about your spatial transcriptomics data.</p>
+            <p class="small-info">Examples: "Annotate cell types", "Find spatially variable genes", "Show BRCA1 expression"</p>
+          </div>
+        </div>
+        <div class="chat-input-area">
+          <textarea id="chat-input" placeholder="Ask about your data..." rows="2"></textarea>
+          <div class="chat-buttons">
+            <button id="send-btn" class="btn-primary" disabled>Send</button>
+            <button id="abort-btn" class="btn-danger hidden">Stop</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

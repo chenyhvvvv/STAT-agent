@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs and outputs
+logs/
+outputs/
+checkpoints/
+wandb/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# pytest
+.pytest_cache/
+
+# Environment / secrets
+.env
+*.pem
+
+# Large data files
+*.h5ad
+*.tif
+*.tiff
+*.npy
+
+# Misc
+.Rhistory
+*.backup
+
+# External reference projects
+external/
+
+# Internal development notes
+docs/
+paper/
+
+# Local workflow scripts
+sync.sh
+
+# Claude Code project instructions (local only)
+CLAUDE.md
+
+# Claude Code local state (keep .claude/skills/ which is part of the project)
+.claude/*
+!.claude/skills/
+.claude/skills/**/development.ipynb
+.claude/skills/**/__pycache__/
