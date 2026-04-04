@@ -2656,8 +2656,6 @@ Provide a clear, concise interpretation (2-4 sentences):
         assembled_parts = []
         result_idx = 0
 
-        has_interpret = bool(interpret_instruction)
-
         for seg_type, content in segments:
             if seg_type == 'text':
                 assembled_parts.append(f"**Your explanation:**\n{content}\n")
@@ -2666,10 +2664,7 @@ Provide a clear, concise interpretation (2-4 sentences):
                 # Add corresponding output
                 if result_idx < len(execution_results):
                     result = execution_results[result_idx]
-                    # Only pass stdout when interpretation is requested —
-                    # otherwise it's just diagnostic noise that causes
-                    # spurious partial_success from truncation
-                    if result.stdout and has_interpret:
+                    if result.stdout:
                         truncated = result.stdout[:3000]
                         if len(result.stdout) > 3000:
                             truncated += "\n... (output truncated)"
@@ -2699,6 +2694,7 @@ Provide a clear, concise interpretation (2-4 sentences):
         conversation_history = self.memory.get_history_string()
 
         # Build prompt
+        has_interpret = bool(interpret_instruction)
 
         prompt = f"""Analyze spatial transcriptomics code execution results.
 
@@ -2725,9 +2721,10 @@ Rules:
 - data_changes: Always provide, be detailed and specific
 - interpretation: Only if requested above (otherwise null)
 - key_findings: Only if interpretation requested (otherwise empty array)
-- execution_issues: Detect if code failed, didn't achieve goal, or had validation issues
-  - has_issues=true if: Python error occurred, validation failed, code had no effect, or goal not achieved
-  - issue_type: "error" (Python exception), "validation_failed" (data validation failed), "partial_success" (some parts worked), "no_effect" (code ran but changed nothing)
+- execution_issues: Detect if code ACTUALLY failed or did not achieve the user's goal
+  - has_issues=true ONLY if: Python error occurred, validation failed, code had no effect, or the user's goal was NOT achieved
+  - has_issues=false if: output was truncated but the analysis/data changes completed successfully. Truncated print output is NORMAL for large datasets and is NOT an issue.
+  - issue_type: "error" (Python exception), "validation_failed" (data validation failed), "partial_success" (goal partially achieved — NOT for truncated output), "no_effect" (code ran but changed nothing)
   - explanation: User-friendly explanation of what went wrong and why
 
 Output valid JSON only:"""
