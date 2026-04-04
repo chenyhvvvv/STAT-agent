@@ -19,7 +19,7 @@ An AI-powered platform for spatial omics analysis with multi-format support, int
 pip install stat-agent
 ```
 
-With analysis skill dependencies (squidpy, scvi-tools, etc.):
+With all analysis skill dependencies (squidpy, scvi-tools, torch, liana, etc.):
 
 ```bash
 pip install "stat-agent[skills]"

@@ -64,11 +64,37 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Analysis skill dependencies (heavy bio packages)
+# All analysis skill dependencies
 skills = [
+    # Neighborhood enrichment, LIANA spatial neighbors
     "squidpy>=1.2",
+
+    # GO enrichment
     "gseapy>=1.0",
-    "scvi-tools>=1.0",
+
+    # Cell communication
+    "liana",
+    "cellphonedb>=5.0,<6.0",
+    "plotnine>=0.12",           # LIANA visualization
+
+    # Batch integration
+    "harmonypy>=0.0.9",
+
+    # Cell type annotation (scANVI)
+    "scvi-tools>=1.0,<2.0",
+
+    # Deconvolution (RCTD)
+    "qpsolvers>=4.0",
+    "ray>=2.0",
+
+    # Spatially variable genes
+    "NaiveDE>=0.1",
+    "SpatialDE>=1.1",
+
+    # Spatial domains (SpaGCN) + alignment (STalign)
+    "torch>=2.0",
+    "SpaGCN>=1.2.5",
+    "nrrd>=1.0",
 ]
 
 # Development
