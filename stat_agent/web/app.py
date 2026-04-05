@@ -1213,10 +1213,20 @@ def chat_stream():
                     and agent.clarification_context
                     and agent.clarification_context.is_waiting_for_clarification()
                 )
-                # Capture the original query before clarification context is cleared
+                # Capture the original query before clarification context is cleared.
+                # For planner clarifications, it's stored in _original_query.
+                # For skill_selection/verifier, look back in memory messages for the
+                # last user message before this one (which is the original query).
                 _original_query = None
-                if _is_continuation and hasattr(agent, 'clarification_context'):
+                if _is_continuation:
+                    # Try clarification context first
                     _original_query = getattr(agent.clarification_context, '_original_query', None)
+                    # Fall back: find the previous user message in memory
+                    if not _original_query and agent.memory:
+                        user_msgs = [m for m in agent.memory.messages if m.role == 'user']
+                        if user_msgs:
+                            _original_query = user_msgs[-1].content
+                logger.info(f"Chat stream: is_continuation={_is_continuation}, original_query={_original_query[:80] if _original_query else None}")
                 # Track turn count to detect if a new turn was created
                 _turns_before = len(agent.memory.turns) if agent and agent.memory else 0
 
@@ -1482,22 +1492,29 @@ def chat_stream():
                     _turns_after = len(agent.memory.turns) if agent and agent.memory else 0
                     new_turn_created = _turns_after > _turns_before
 
+                    logger.info(f"Turn tracking: before={_turns_before}, after={_turns_after}, new_turn={new_turn_created}, pending_visual={len(_pending_visual_events)}, visual={len(visual_events)}")
+
                     if new_turn_created and agent is not None:
                         last_turn = agent.memory.turns[-1]
                         if last_turn.metadata is None:
                             last_turn.metadata = {}
-                        # Prepend any pending visual events from previous clarification request
-                        all_visual = list(_pending_visual_events) + visual_events
+                        # Save visual events: separate pending (from clarification request)
+                        # and current (from this execution) so frontend can insert reply between them
+                        pending = list(_pending_visual_events)
                         _pending_visual_events.clear()
-                        if all_visual:
-                            last_turn.metadata['visual_events'] = all_visual
+                        if pending or visual_events:
+                            last_turn.metadata['visual_events_before'] = pending  # clarification UI
+                            last_turn.metadata['visual_events'] = visual_events   # execution events
+                            logger.info(f"Saved visual events: {len(pending)} before (clarification), {len(visual_events)} after (execution)")
                         if _is_continuation:
                             last_turn.metadata['is_continuation'] = True
                             if _original_query:
                                 last_turn.metadata['original_query'] = _original_query
+                            logger.info(f"Marked turn as continuation, original_query={_original_query[:80] if _original_query else None}")
                     elif visual_events:
                         # No turn was created (clarification requested) — save events for next turn
                         _pending_visual_events.extend(visual_events)
+                        logger.info(f"No turn created, saved {len(visual_events)} visual events as pending")
 
                     # Handle celltype color generation if celltypes were updated
                     celltype_updated = len(final_state_changes.get('celltypes_updated', [])) > 0 if final_state_changes else False
@@ -1586,6 +1603,7 @@ def get_chat_history():
                 'assistant': turn.assistant_message,
                 'code': turn.code_generated,
                 'plots': meta.get('plots', []),
+                'visual_events_before': meta.get('visual_events_before', []),
                 'visual_events': meta.get('visual_events', []),
                 'is_continuation': meta.get('is_continuation', False),
                 'original_query': meta.get('original_query', None),

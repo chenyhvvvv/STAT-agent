@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stat-agent"
-version = "0.1.11"
+version = "0.1.12"
 description = "STAT: Spatial Transcriptomics Analytical agenT - AI-powered platform for spatial omics analysis"
 readme = "README.md"
 requires-python = ">=3.9"

@@ -292,17 +292,17 @@
         const body = document.createElement('div');
         body.className = 'chat-msg-body';
 
-        // For continuations, find the clarification visual events from the PREVIOUS
-        // request. These were stored on THIS turn's visual_events since the clarification
-        // request didn't create its own turn. The visual_events list contains both
-        // the clarification event AND the execution events in order.
-
-        _renderVisualEvents(body, turn.visual_events);
-
-        // For continuations, show the user's reply inline (e.g. "↳ 1")
         if (turn.is_continuation) {
+          // Render: [clarification UI] → [user's reply] → [execution events] → [results]
+          // visual_events_before = from the clarification request (skill selection, clarification, etc.)
+          // visual_events = from this execution (planning, steps, etc.)
+          _renderVisualEvents(body, turn.visual_events_before);
           body.insertAdjacentHTML('beforeend',
             `<div class="small-info" style="margin:6px 0;color:var(--text-secondary);font-style:italic">↳ ${escapeHtml(turn.user)}</div>`);
+          _renderVisualEvents(body, turn.visual_events);
+        } else {
+          _renderVisualEvents(body, turn.visual_events_before);
+          _renderVisualEvents(body, turn.visual_events);
         }
 
         _renderAssistantContent(body, turn);
