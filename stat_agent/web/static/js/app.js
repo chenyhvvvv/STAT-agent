@@ -267,48 +267,53 @@
       const welcome = chatEl.querySelector('.chat-welcome');
       if (welcome) welcome.remove();
 
+      // currentBody tracks the assistant bubble body for merging continuation turns.
+      // In the live UI, a clarification chain (original query → skill selection → "1" →
+      // step 1 results → prerequisites → answer → step 2 results) all happens in ONE
+      // user bubble + ONE assistant bubble. In memory, this creates multiple turns.
+      // Continuation turns (is_continuation=true) append to the current assistant bubble.
+      let currentBody = null;
+
       for (const turn of res.turns) {
-        // For continuation turns (clarification/skill selection/prerequisite replies):
-        // In the live UI, the original query → clarification → user reply → result all
-        // happened in ONE user bubble + ONE assistant bubble. No separate turn was created
-        // for the clarification question — it was just a visual event.
-        //
-        // In memory, only the resolution turn exists: Turn(user="1", assistant="results").
-        // The original query is saved in turn.original_query.
-        //
-        // We reconstruct the full exchange: original query as user bubble, then one
-        // assistant bubble containing: [clarification UI] → [inline reply] → [results].
-
-        // User bubble: show original_query for continuations, otherwise turn.user
-        const userText = (turn.is_continuation && turn.original_query) ? turn.original_query : turn.user;
-        const userDiv = document.createElement('div');
-        userDiv.className = 'chat-msg user';
-        userDiv.innerHTML = `<div class="chat-msg-body">${escapeHtml(userText)}</div>`;
-        chatEl.appendChild(userDiv);
-
-        // Assistant bubble
-        const assistDiv = document.createElement('div');
-        assistDiv.className = 'chat-msg assistant';
-        const body = document.createElement('div');
-        body.className = 'chat-msg-body';
-
-        if (turn.is_continuation) {
-          // Render: [clarification UI] → [user's reply] → [execution events] → [results]
-          // visual_events_before = from the clarification request (skill selection, clarification, etc.)
-          // visual_events = from this execution (planning, steps, etc.)
-          _renderVisualEvents(body, turn.visual_events_before);
-          body.insertAdjacentHTML('beforeend',
+        if (turn.is_continuation && currentBody) {
+          // Append to existing assistant bubble — no new user/assistant bubbles.
+          // Show clarification UI from the previous request's pending events,
+          // then the user's inline reply, then this turn's execution events + content.
+          _renderVisualEvents(currentBody, turn.visual_events_before);
+          currentBody.insertAdjacentHTML('beforeend',
             `<div class="small-info" style="margin:6px 0;color:var(--text-secondary);font-style:italic">↳ ${escapeHtml(turn.user)}</div>`);
-          _renderVisualEvents(body, turn.visual_events);
+          _renderVisualEvents(currentBody, turn.visual_events);
+          _renderAssistantContent(currentBody, turn);
         } else {
-          _renderVisualEvents(body, turn.visual_events_before);
-          _renderVisualEvents(body, turn.visual_events);
+          // New exchange — create user + assistant bubbles.
+          // For the first continuation in a chain (no currentBody yet), show original_query.
+          const userText = (turn.is_continuation && turn.original_query) ? turn.original_query : turn.user;
+          const userDiv = document.createElement('div');
+          userDiv.className = 'chat-msg user';
+          userDiv.innerHTML = `<div class="chat-msg-body">${escapeHtml(userText)}</div>`;
+          chatEl.appendChild(userDiv);
+
+          const assistDiv = document.createElement('div');
+          assistDiv.className = 'chat-msg assistant';
+          const body = document.createElement('div');
+          body.className = 'chat-msg-body';
+
+          if (turn.is_continuation) {
+            _renderVisualEvents(body, turn.visual_events_before);
+            body.insertAdjacentHTML('beforeend',
+              `<div class="small-info" style="margin:6px 0;color:var(--text-secondary);font-style:italic">↳ ${escapeHtml(turn.user)}</div>`);
+            _renderVisualEvents(body, turn.visual_events);
+          } else {
+            _renderVisualEvents(body, turn.visual_events_before);
+            _renderVisualEvents(body, turn.visual_events);
+          }
+
+          _renderAssistantContent(body, turn);
+
+          assistDiv.appendChild(body);
+          chatEl.appendChild(assistDiv);
+          currentBody = body;  // Track for potential continuation merging
         }
-
-        _renderAssistantContent(body, turn);
-
-        assistDiv.appendChild(body);
-        chatEl.appendChild(assistDiv);
       }
       scrollChatToBottom();
     } catch (_) { /* no history available */ }

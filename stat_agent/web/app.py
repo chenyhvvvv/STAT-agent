@@ -53,6 +53,7 @@ llm_config: Optional[Dict] = None  # Store LLM config for reuse in skills
 chat_abort_event = threading.Event()  # Signal to abort current chat processing
 chat_busy = False  # True while agent is processing a request
 _pending_visual_events = []  # Visual events from clarification requests (no turn created yet)
+_chain_original_query = None  # Original user query for the current clarification chain
 
 
 @app.route('/')
@@ -1213,20 +1214,22 @@ def chat_stream():
                     and agent.clarification_context
                     and agent.clarification_context.is_waiting_for_clarification()
                 )
-                # Capture the original query before clarification context is cleared.
-                # For planner clarifications, it's stored in _original_query.
-                # For skill_selection/verifier, look back in memory messages for the
-                # last user message before this one (which is the original query).
-                _original_query = None
-                if _is_continuation:
-                    # Try clarification context first
-                    _original_query = getattr(agent.clarification_context, '_original_query', None)
-                    # Fall back: find the previous user message in memory
-                    if not _original_query and agent.memory:
+                # Track original query across the entire clarification chain.
+                # On a new query, reset. On first continuation, capture. On subsequent, reuse.
+                global _chain_original_query
+                if not _is_continuation:
+                    _chain_original_query = None  # New query — reset chain
+                elif _chain_original_query is None:
+                    # First continuation in chain — capture original query
+                    oq = getattr(agent.clarification_context, '_original_query', None)
+                    if not oq and agent.memory:
                         user_msgs = [m for m in agent.memory.messages if m.role == 'user']
                         if user_msgs:
-                            _original_query = user_msgs[-1].content
-                logger.info(f"Chat stream: is_continuation={_is_continuation}, original_query={_original_query[:80] if _original_query else None}")
+                            oq = user_msgs[-1].content
+                    _chain_original_query = oq
+                # else: subsequent continuation — reuse existing _chain_original_query
+
+                logger.info(f"Chat stream: is_continuation={_is_continuation}, chain_original_query={_chain_original_query[:80] if _chain_original_query else None}")
                 # Track turn count to detect if a new turn was created
                 _turns_before = len(agent.memory.turns) if agent and agent.memory else 0
 
@@ -1494,26 +1497,47 @@ def chat_stream():
 
                     logger.info(f"Turn tracking: before={_turns_before}, after={_turns_after}, new_turn={new_turn_created}, pending_visual={len(_pending_visual_events)}, visual={len(visual_events)}")
 
+                    # If the stream ended waiting for clarification AND a turn was also created
+                    # (multi-step: step N completed, step N+1 needs clarification), split the
+                    # visual events: events up to the turn belong to this turn, trailing
+                    # clarification events belong to the next turn as pending.
+                    _CLARIFICATION_TYPES = {'clarification_needed', 'skill_selection', 'prerequisites_needed'}
+                    trailing_clarification = []
+                    turn_visual = visual_events
+                    if new_turn_created and visual_events:
+                        # Check if the last visual event is a clarification request
+                        for i in range(len(visual_events) - 1, -1, -1):
+                            if visual_events[i].get('type') in _CLARIFICATION_TYPES:
+                                trailing_clarification = visual_events[i:]
+                                turn_visual = visual_events[:i]
+                                break
+                            else:
+                                break  # Stop at first non-clarification from the end
+
                     if new_turn_created and agent is not None:
                         last_turn = agent.memory.turns[-1]
                         if last_turn.metadata is None:
                             last_turn.metadata = {}
-                        # Save visual events: separate pending (from clarification request)
-                        # and current (from this execution) so frontend can insert reply between them
+                        # Pending events from previous clarification request go before this turn's events
                         pending = list(_pending_visual_events)
                         _pending_visual_events.clear()
-                        if pending or visual_events:
-                            last_turn.metadata['visual_events_before'] = pending  # clarification UI
-                            last_turn.metadata['visual_events'] = visual_events   # execution events
-                            logger.info(f"Saved visual events: {len(pending)} before (clarification), {len(visual_events)} after (execution)")
+                        if pending or turn_visual:
+                            last_turn.metadata['visual_events_before'] = pending
+                            last_turn.metadata['visual_events'] = turn_visual
+                            logger.info(f"Saved visual events: {len(pending)} before, {len(turn_visual)} after")
                         if _is_continuation:
                             last_turn.metadata['is_continuation'] = True
-                            if _original_query:
-                                last_turn.metadata['original_query'] = _original_query
-                            logger.info(f"Marked turn as continuation, original_query={_original_query[:80] if _original_query else None}")
+                            if _chain_original_query:
+                                last_turn.metadata['original_query'] = _chain_original_query
+                            logger.info(f"Marked turn as continuation, original_query={_chain_original_query[:80] if _chain_original_query else None}")
+                        # Trailing clarification events go to pending for next turn
+                        if trailing_clarification:
+                            _pending_visual_events.extend(trailing_clarification)
+                            logger.info(f"Moved {len(trailing_clarification)} trailing clarification events to pending")
                     elif visual_events:
-                        # No turn was created (clarification requested) — save events for next turn
+                        # No turn was created (clarification requested) — save all events for next turn
                         _pending_visual_events.extend(visual_events)
+                        logger.info(f"No turn created, saved {len(visual_events)} events as pending")
                         logger.info(f"No turn created, saved {len(visual_events)} visual events as pending")
 
                     # Handle celltype color generation if celltypes were updated
