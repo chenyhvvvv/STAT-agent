@@ -69,7 +69,8 @@ def LoadLikelihoodTable(ext_dir):
 
 # def run_RCTD(RCTD, Q_mat_all, X_vals_loc, doublet_mode = 'full', loggings = None):
 def run_RCTD(RCTD, doublet_mode = 'full', loggings = logger):
-    ext_dir = os.path.dirname(os.path.realpath(__file__)) + "/extdata/"
+    from .data_utils import ensure_extdata
+    ext_dir = ensure_extdata()
     Q_mat_all, X_vals_loc = LoadLikelihoodTable(ext_dir)
     print(doublet_mode)
     RCTD = fitBulk(RCTD, loggings = loggings)

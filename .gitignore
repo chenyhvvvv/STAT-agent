@@ -46,6 +46,9 @@ wandb/
 *.tiff
 *.npy
 
+# Auto-downloaded skill data
+**/extdata/
+
 # Misc
 .Rhistory
 *.backup
