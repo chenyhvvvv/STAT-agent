@@ -11,6 +11,7 @@ filter_requirements:
 prerequisites:
   - Cell type annotations in target slice (adata.obs['celltype'])
   - Species information (human or mouse) for selecting the correct ligand-receptor database
+default_skill: true
 ---
 
 # Cell-Cell Communication Analysis Using LIANA+

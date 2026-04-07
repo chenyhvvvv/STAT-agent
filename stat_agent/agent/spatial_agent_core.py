@@ -439,6 +439,9 @@ class SpatialAgent:
         self.pipeline_executor = None
         self.conversation_orchestrator = None
 
+        # Track disabled skills (by slug) — populated after registry loads
+        self.disabled_skills: set = set()
+
         if enable_skills:
             # Auto-discover skills directory
             if skill_dir is None:
@@ -458,6 +461,13 @@ class SpatialAgent:
                 self.skill_registry = SkillRegistry(skill_root=skill_dir, progressive_disclosure=True)
                 self.skill_registry.load()
                 logger.info(f"Loaded skills from {skill_dir}")
+
+                # Initialize disabled_skills from default_skill attribute
+                for slug, meta in self.skill_registry.skill_metadata.items():
+                    if not meta.default_skill:
+                        self.disabled_skills.add(slug)
+                if self.disabled_skills:
+                    logger.info(f"Skills disabled by default: {self.disabled_skills}")
             else:
                 logger.warning(f"Skill directory not found: {skill_dir}")
 
@@ -471,6 +481,7 @@ class SpatialAgent:
                 semantic_matcher=self._select_skill_matches_llm_filtered,
                 session=self.session
             )
+            self._sync_disabled_skills()
             logger.info("PipelineExecutor initialized")
 
             # Initialize conversation orchestrator (after pipeline_executor)
@@ -4300,6 +4311,48 @@ Return JSON:
             - deconv_weights_updated: List of slice_ids with deconv_weights updates
         """
         return self._state_changes.copy()
+
+    def _sync_disabled_skills(self):
+        """Sync disabled_skills to pipeline executor."""
+        if self.pipeline_executor:
+            self.pipeline_executor.disabled_skills = set(self.disabled_skills)
+
+    def enable_skill(self, slug: str) -> bool:
+        """Enable a skill by slug. Returns True if state changed."""
+        slug = slug.lower()
+        if slug in self.disabled_skills:
+            self.disabled_skills.discard(slug)
+            self._sync_disabled_skills()
+            logger.info(f"Skill enabled: {slug}")
+            return True
+        return False
+
+    def disable_skill(self, slug: str) -> bool:
+        """Disable a skill by slug. Returns True if state changed."""
+        slug = slug.lower()
+        if slug not in self.disabled_skills:
+            self.disabled_skills.add(slug)
+            self._sync_disabled_skills()
+            logger.info(f"Skill disabled: {slug}")
+            return True
+        return False
+
+    def get_skill_states(self) -> list:
+        """Return list of all skills with their enabled/disabled state."""
+        if not self.skill_registry:
+            return []
+        result = []
+        for slug, meta in self.skill_registry.skill_metadata.items():
+            result.append({
+                'slug': meta.slug,
+                'title': meta.name,
+                'description': meta.description,
+                'enabled': slug not in self.disabled_skills,
+                'default_skill': meta.default_skill,
+                'filter_requirements': meta.filter_requirements,
+                'prerequisites': meta.prerequisites,
+            })
+        return sorted(result, key=lambda x: (not x['enabled'], x['title']))
 
     def reset(self) -> None:
         """Reset agent state (clear memory, executor, and skill imports)."""

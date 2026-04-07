@@ -12,6 +12,7 @@ filter_requirements:
 prerequisites:
   - Number of expected spatial domains (e.g. 7)
   - H&E image (in the session) is recommended but optional of the target slice
+default_skill: true
 ---
 
 # Spatial Domain Detection Using SpaGCN

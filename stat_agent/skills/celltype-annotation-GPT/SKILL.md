@@ -11,6 +11,7 @@ filter_requirements:
 
 prerequisites:
   - Tissue type information (e.g., breast cancer, brain cortex, liver)
+default_skill: true
 ---
 
 # Fast Cell Type Annotation with Clustering + LLM

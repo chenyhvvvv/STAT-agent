@@ -1685,6 +1685,77 @@ def get_chat_history():
     return jsonify({'success': True, 'turns': turns})
 
 
+@app.route('/api/skills/list', methods=['GET'])
+def list_skills():
+    """Return all skills with their enabled/disabled state."""
+    global agent
+    if agent is None:
+        return jsonify({'error': 'Agent not initialized'}), 400
+    try:
+        skills = agent.get_skill_states()
+        return jsonify({'skills': skills})
+    except Exception as e:
+        logger.error(f"Failed to list skills: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/skills/toggle', methods=['POST'])
+def toggle_skill():
+    """Toggle a skill enabled/disabled. Body: {slug, enabled}."""
+    global agent
+    if agent is None:
+        return jsonify({'error': 'Agent not initialized'}), 400
+    data = request.json
+    slug = data.get('slug')
+    enabled = data.get('enabled')
+    if slug is None or enabled is None:
+        return jsonify({'error': 'Missing slug or enabled field'}), 400
+    try:
+        if enabled:
+            agent.enable_skill(slug)
+        else:
+            agent.disable_skill(slug)
+        return jsonify({'success': True, 'slug': slug, 'enabled': enabled})
+    except Exception as e:
+        logger.error(f"Failed to toggle skill: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/skills/<slug>/detail', methods=['GET'])
+def skill_detail(slug):
+    """Return full SKILL.md content for rendering."""
+    global agent
+    if agent is None:
+        return jsonify({'error': 'Agent not initialized'}), 400
+    try:
+        if not agent.skill_registry:
+            return jsonify({'error': 'Skill registry not available'}), 400
+        meta = agent.skill_registry.skill_metadata.get(slug.lower())
+        if not meta:
+            return jsonify({'error': f'Skill not found: {slug}'}), 404
+        skill_file = meta.path / "SKILL.md"
+        if not skill_file.exists():
+            return jsonify({'error': f'SKILL.md not found for {slug}'}), 404
+        content = skill_file.read_text(encoding='utf-8')
+        # Strip frontmatter for display
+        lines = content.splitlines()
+        if lines and lines[0].strip() == '---':
+            try:
+                closing = lines.index('---', 1)
+                content = '\n'.join(lines[closing + 1:]).strip()
+            except ValueError:
+                pass
+        return jsonify({
+            'slug': meta.slug,
+            'title': meta.name,
+            'description': meta.description,
+            'content_md': content
+        })
+    except Exception as e:
+        logger.error(f"Failed to get skill detail: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/session/reset', methods=['POST'])
 def reset_session():
     """Reset session and agent state (logout)."""

@@ -125,6 +125,7 @@ class PipelineExecutor:
         self.skill_registry = skill_registry
         self.semantic_matcher = semantic_matcher
         self.session = session
+        self.disabled_skills: set = set()  # Populated from agent.disabled_skills
 
     async def execute_pipeline(
         self,
@@ -205,6 +206,9 @@ class PipelineExecutor:
             session=self.session,
             all_skills=self.skill_registry.skill_metadata
         )
+        # Remove user-disabled skills
+        if self.disabled_skills:
+            compatible_skills = [s for s in compatible_skills if s.slug not in self.disabled_skills]
         logger.info(f"✓ Filter result: {len(compatible_skills)} compatible skills")
 
         # Stage 3: SEMANTIC MATCHING
@@ -217,7 +221,7 @@ class PipelineExecutor:
         matched_slugs = await self.semantic_matcher(
             request=step.refined_query,
             available_skills=compatible_skills_dict,
-            top_k=2
+            top_k=5
         )
 
         logger.info(f"✓ Semantic matcher found: {len(matched_slugs)} skill(s)")
@@ -433,6 +437,9 @@ class PipelineExecutor:
             session=self.session,
             all_skills=self.skill_registry.skill_metadata
         )
+        # Remove user-disabled skills
+        if self.disabled_skills:
+            compatible_skills = [s for s in compatible_skills if s.slug not in self.disabled_skills]
         logger.info(f"✓ Filter result: {len(compatible_skills)} compatible skills")
         yield {'type': 'filter_complete', 'count': len(compatible_skills)}
 
@@ -446,7 +453,7 @@ class PipelineExecutor:
         matched_slugs = await self.semantic_matcher(
             request=step.refined_query,
             available_skills=compatible_skills_dict,
-            top_k=2
+            top_k=5
         )
 
         logger.info(f"✓ Semantic matcher found: {len(matched_slugs)} skill(s)")
@@ -606,6 +613,9 @@ class PipelineExecutor:
             session=self.session,
             all_skills=self.skill_registry.skill_metadata
         )
+        # Remove user-disabled skills
+        if self.disabled_skills:
+            compatible_skills = [s for s in compatible_skills if s.slug not in self.disabled_skills]
         logger.info(f"✓ Filter result: {len(compatible_skills)} compatible skills")
         yield {'type': 'filter_complete', 'count': len(compatible_skills)}
 
@@ -619,7 +629,7 @@ class PipelineExecutor:
         matched_slugs = await self.semantic_matcher(
             request=step.refined_query,
             available_skills=compatible_skills_dict,
-            top_k=2
+            top_k=5
         )
 
         logger.info(f"✓ Semantic matcher found: {len(matched_slugs)} skill(s)")

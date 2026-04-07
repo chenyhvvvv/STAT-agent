@@ -121,6 +121,9 @@ class SkillMetadata:
     # NEW: Prerequisites (simple descriptions for verifier)
     prerequisites: List[str] = field(default_factory=list)
 
+    # Whether this skill is enabled by default
+    default_skill: bool = True
+
     # Legacy format-aware fields (kept for backward compatibility)
     applicable_formats: List[str] = field(default_factory=lambda: ["single_slice", "multi_slice", "multi_omics"])
     modality_required: Optional[str] = None  # 'gene', 'protein', or None (either)
@@ -178,6 +181,9 @@ class SkillDefinition:
 
     # NEW: Prerequisites (simple descriptions for verifier)
     prerequisites: List[str] = field(default_factory=list)
+
+    # Whether this skill is enabled by default
+    default_skill: bool = True
 
     # Legacy format-aware fields (kept for backward compatibility)
     applicable_formats: List[str] = field(default_factory=lambda: ["single_slice", "multi_slice", "multi_omics"])
@@ -310,6 +316,7 @@ class SkillRegistry:
                     metadata=skill.metadata,
                     filter_requirements=skill.filter_requirements,
                     prerequisites=skill.prerequisites,
+                    default_skill=skill.default_skill,
                     applicable_formats=skill.applicable_formats,
                     modality_required=skill.modality_required,
                     slice_behavior=skill.slice_behavior
@@ -397,6 +404,11 @@ class SkillRegistry:
         # NEW: Parse prerequisites (list of simple descriptions)
         prerequisites = self._parse_list_field(metadata, "prerequisites", default=[])
 
+        # Parse default_skill (default True if missing)
+        default_skill = metadata.get("default_skill", True)
+        if isinstance(default_skill, str):
+            default_skill = default_skill.lower() in ('true', '1', 'yes')
+
         return SkillMetadata(
             name=str(title),
             slug=str(slug_value),
@@ -405,6 +417,7 @@ class SkillRegistry:
             metadata=metadata,
             filter_requirements=filter_requirements,
             prerequisites=prerequisites,
+            default_skill=bool(default_skill),
             applicable_formats=applicable_formats,
             modality_required=modality_required,
             slice_behavior=slice_behavior
@@ -456,6 +469,11 @@ class SkillRegistry:
         # NEW: Parse prerequisites (list of simple descriptions)
         prerequisites = self._parse_list_field(metadata, "prerequisites", default=[])
 
+        # Parse default_skill (default True if missing)
+        default_skill = metadata.get("default_skill", True)
+        if isinstance(default_skill, str):
+            default_skill = default_skill.lower() in ('true', '1', 'yes')
+
         return SkillDefinition(
             name=str(title),
             slug=str(slug_value),
@@ -465,6 +483,7 @@ class SkillRegistry:
             metadata=metadata,
             filter_requirements=filter_requirements,
             prerequisites=prerequisites,
+            default_skill=bool(default_skill),
             applicable_formats=applicable_formats,
             modality_required=modality_required,
             slice_behavior=slice_behavior

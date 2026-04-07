@@ -11,6 +11,7 @@ filter_requirements:
 
 prerequisites:
   - Cell type annotations in the target slice (adata.obs['celltype'])
+default_skill: true
 ---
 
 # Neighborhood Enrichment Analysis

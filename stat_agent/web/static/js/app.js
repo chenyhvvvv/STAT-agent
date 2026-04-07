@@ -30,6 +30,10 @@
     // Interaction
     isPanning: false,
     panStart: null,
+
+    // Skill panel
+    skillPanelOpen: false,
+    skills: [],  // [{slug, title, description, enabled, ...}]
   };
 
   // ---- localStorage helpers for form persistence ----
@@ -85,6 +89,7 @@
           if (r.success) state.geneList = r.genes || [];
         });
         refreshROIs();
+        loadSkillList();
         restoreChatHistory();
 
         // If agent was busy when we reconnected, show a notice
@@ -343,6 +348,8 @@
     state.chatStreaming = false;
     state.canvases = {};
     state.currentAssistantMsg = null;
+    state.skillPanelOpen = false;
+    state.skills = [];
 
     // Show init, hide app
     document.getElementById('app').classList.add('hidden');
@@ -354,6 +361,224 @@
 
     // Restore saved form values
     loadFormFromStorage();
+  }
+
+  // ============================================================
+  // SECTION: SKILL PANEL
+  // ============================================================
+
+  let _skillTooltipEl = null;
+  let _skillTooltipTimer = null;
+
+  async function loadSkillList() {
+    try {
+      const res = await fetch('/api/skills/list');
+      const data = await res.json();
+      if (data.skills) {
+        state.skills = data.skills;
+        renderSkillList();
+      }
+    } catch (e) {
+      console.warn('Failed to load skills:', e);
+    }
+  }
+
+  function toggleSkillPanel() {
+    state.skillPanelOpen = !state.skillPanelOpen;
+    const panel = document.getElementById('skill-panel');
+    if (state.skillPanelOpen) {
+      panel.classList.add('open');
+    } else {
+      panel.classList.remove('open');
+      hideSkillTooltip();
+    }
+  }
+
+  function renderSkillList() {
+    const container = document.getElementById('skill-list');
+    if (!container) return;
+    container.innerHTML = '';
+    for (const skill of state.skills) {
+      const row = document.createElement('div');
+      row.className = 'skill-row';
+      row.dataset.slug = skill.slug;
+
+      const label = document.createElement('label');
+      label.className = 'skill-toggle';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = skill.enabled;
+      cb.addEventListener('change', () => toggleSkill(skill.slug, cb.checked));
+      label.appendChild(cb);
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'skill-name';
+      nameSpan.textContent = skill.title;
+      nameSpan.addEventListener('mouseenter', (e) => showSkillTooltip(skill, e));
+      nameSpan.addEventListener('mouseleave', () => scheduleHideTooltip());
+
+      const infoBtn = document.createElement('button');
+      infoBtn.className = 'skill-info-btn';
+      infoBtn.title = 'View full details';
+      infoBtn.innerHTML = '&#8505;';
+      infoBtn.addEventListener('click', (e) => { e.stopPropagation(); showSkillDetail(skill.slug); });
+
+      row.appendChild(label);
+      row.appendChild(nameSpan);
+      row.appendChild(infoBtn);
+      container.appendChild(row);
+    }
+  }
+
+  async function toggleSkill(slug, enabled) {
+    try {
+      await fetch('/api/skills/toggle', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({slug, enabled})
+      });
+      // Update local state and re-sort: enabled first, then alphabetical
+      const skill = state.skills.find(s => s.slug === slug);
+      if (skill) skill.enabled = enabled;
+      state.skills.sort((a, b) => (a.enabled === b.enabled) ? a.title.localeCompare(b.title) : (b.enabled - a.enabled));
+      renderSkillList();
+    } catch (e) {
+      console.warn('Failed to toggle skill:', e);
+    }
+  }
+
+  function showSkillTooltip(skill, event) {
+    clearTimeout(_skillTooltipTimer);
+    hideSkillTooltip();
+    const tt = document.createElement('div');
+    tt.className = 'skill-tooltip';
+
+    let html = `<div class="tt-title">${escapeHtml(skill.title)}</div>`;
+    html += `<div class="tt-desc">${escapeHtml(skill.description)}</div>`;
+
+    if (skill.filter_requirements) {
+      const fr = skill.filter_requirements;
+      html += '<div class="tt-section"><div class="tt-label">Requirements</div>';
+      if (fr.num_slices != null) html += `<span class="tt-tag">slices: ${fr.num_slices}</span> `;
+      if (fr.modalities) html += fr.modalities.map(m => `<span class="tt-tag">${escapeHtml(m)}</span>`).join(' ');
+      if (fr.data_levels) html += ' ' + fr.data_levels.map(d => `<span class="tt-tag">${escapeHtml(d)}</span>`).join(' ');
+      html += '</div>';
+    }
+
+    if (skill.prerequisites && skill.prerequisites.length) {
+      html += '<div class="tt-section"><div class="tt-label">Prerequisites</div>';
+      html += '<ul style="margin:2px 0;padding-left:16px">';
+      for (const p of skill.prerequisites) html += `<li>${escapeHtml(p)}</li>`;
+      html += '</ul></div>';
+    }
+
+    tt.innerHTML = html;
+    document.body.appendChild(tt);
+    _skillTooltipEl = tt;
+
+    // Position to the right of the skill panel (never overlapping it)
+    const panel = document.getElementById('skill-panel');
+    const panelRect = panel.getBoundingClientRect();
+    const rowRect = event.target.closest('.skill-row').getBoundingClientRect();
+    let left = panelRect.right + 6;
+    let top = rowRect.top;
+    // Keep within viewport
+    if (left + 310 > window.innerWidth) left = panelRect.left - 310;
+    if (top + tt.offsetHeight > window.innerHeight) top = Math.max(8, window.innerHeight - tt.offsetHeight - 8);
+    tt.style.left = left + 'px';
+    tt.style.top = top + 'px';
+  }
+
+  function scheduleHideTooltip() {
+    _skillTooltipTimer = setTimeout(hideSkillTooltip, 200);
+  }
+
+  function hideSkillTooltip() {
+    clearTimeout(_skillTooltipTimer);
+    if (_skillTooltipEl) {
+      _skillTooltipEl.remove();
+      _skillTooltipEl = null;
+    }
+  }
+
+  async function showSkillDetail(slug) {
+    const modal = document.getElementById('skill-detail-modal');
+    const titleEl = document.getElementById('skill-detail-title');
+    const bodyEl = document.getElementById('skill-detail-body');
+    titleEl.textContent = 'Loading...';
+    bodyEl.innerHTML = '<div class="small-info">Loading skill details...</div>';
+    modal.classList.remove('hidden');
+
+    try {
+      const res = await fetch(`/api/skills/${encodeURIComponent(slug)}/detail`);
+      const data = await res.json();
+      if (data.error) {
+        titleEl.textContent = 'Error';
+        bodyEl.innerHTML = `<div class="small-info">${escapeHtml(data.error)}</div>`;
+        return;
+      }
+      titleEl.textContent = data.title || slug;
+      bodyEl.innerHTML = renderMarkdownFull(data.content_md || '');
+    } catch (e) {
+      titleEl.textContent = 'Error';
+      bodyEl.innerHTML = `<div class="small-info">Failed to load: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  function closeSkillDetail() {
+    document.getElementById('skill-detail-modal').classList.add('hidden');
+  }
+
+  /** Render markdown for skill detail modal (more complete than chat renderer).
+   *  Splits on code fences first so their content is never processed as markdown. */
+  function renderMarkdownFull(md) {
+    if (!md) return '';
+
+    // Split by code fences: alternating [text, lang, code, text, lang, code, ...]
+    const parts = md.split(/(```\w*\n[\s\S]*?```)/g);
+    let html = '';
+    for (const part of parts) {
+      const fenceMatch = part.match(/^```(\w*)\n([\s\S]*?)```$/);
+      if (fenceMatch) {
+        // Code block — escape content, wrap in <pre><code>, done
+        html += `<pre><code>${escapeHtml(fenceMatch[2])}</code></pre>`;
+      } else {
+        // Regular markdown text — escape then apply formatting
+        html += _renderMarkdownText(part);
+      }
+    }
+    return html;
+  }
+
+  /** Render a non-code-fence markdown fragment into HTML */
+  function _renderMarkdownText(text) {
+    let html = escapeHtml(text);
+    // Inline code (must come before other inline transforms)
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Headers
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    // Bold & italic
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Unordered lists
+    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+    // Ordered lists
+    html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+    // Links
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    // Horizontal rules
+    html = html.replace(/^---$/gm, '<hr>');
+    // Paragraphs (double newline → break)
+    html = html.replace(/\n\n/g, '</p><p>');
+    html = '<p>' + html + '</p>';
+    // Cleanup: unwrap block elements from <p>
+    html = html.replace(/<p>\s*<\/p>/g, '');
+    html = html.replace(/<p>\s*(<(?:h[123]|ul|ol|hr|pre)[\s>])/g, '$1');
+    html = html.replace(/(<\/(?:h[123]|ul|ol|hr|pre)>)\s*<\/p>/g, '$1');
+    return html;
   }
 
   const CELL_RADIUS = 3;
@@ -2583,6 +2808,9 @@
           // Load ROIs
           refreshROIs();
 
+          // Load skill list
+          loadSkillList();
+
           // Preload other slices
           setTimeout(preloadAllSlices, 500);
         } else {
@@ -2629,6 +2857,13 @@
 
     // Logout
     document.getElementById('logout-btn').addEventListener('click', () => logout());
+
+    // Skill panel
+    document.getElementById('skill-panel-tab').addEventListener('click', () => toggleSkillPanel());
+    document.getElementById('skill-detail-close').addEventListener('click', () => closeSkillDetail());
+    document.getElementById('skill-detail-modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeSkillDetail();
+    });
 
     // Modality toggle
     document.querySelectorAll('#modality-toggle .seg-btn').forEach(btn => {

@@ -11,6 +11,7 @@ filter_requirements:
 
 prerequisites:
   - Cell type annotations in target slice (adata.obs['celltype'])
+default_skill: true
 ---
 
 # Spatial Niche Detection Using Harmonics Model

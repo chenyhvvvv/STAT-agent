@@ -10,6 +10,7 @@ filter_requirements:
 prerequisites:
   - A list of gene provided by user, or a gene list stored in adata.uns['go_genes']
   - Species (human or mouse)
+default_skill: true
 ---
 
 # GO Enrichment Analysis

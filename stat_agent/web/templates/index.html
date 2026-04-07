@@ -69,6 +69,33 @@
     <main class="main-layout">
       <!-- Left: Spatial Viewer -->
       <section class="spatial-viewer">
+        <!-- Skill panel drawer (slides in from left) -->
+        <div id="skill-panel" class="skill-panel">
+          <div class="skill-panel-inner">
+            <div class="skill-panel-header">
+              <h3>Skills</h3>
+            </div>
+            <div class="skill-panel-body" id="skill-list">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+          <!-- Tab handle: right edge of panel, always visible as the drag/click handle -->
+          <div id="skill-panel-tab" class="skill-panel-tab" title="Toggle Skills">
+            <span class="tab-icon">&#9881;</span>
+          </div>
+        </div>
+
+        <!-- Skill detail modal -->
+        <div id="skill-detail-modal" class="modal-overlay hidden">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 id="skill-detail-title"></h3>
+              <button id="skill-detail-close" class="btn-icon" title="Close">&times;</button>
+            </div>
+            <div id="skill-detail-body" class="markdown-body"></div>
+          </div>
+        </div>
+
         <div class="canvas-container" id="canvas-container">
           <canvas id="spatial-canvas"></canvas>
           <div id="canvas-spinner" class="canvas-spinner hidden">

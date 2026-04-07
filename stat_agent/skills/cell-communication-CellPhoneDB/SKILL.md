@@ -12,6 +12,7 @@ filter_requirements:
 prerequisites:
   - Cell type annotations in target slice (adata.obs['celltype'])
   - Human gene expression data with HGNC gene symbols (CellPhoneDB is human-only), need to confirm currently if it is human data.
+default_skill: false
 ---
 
 # Cell-Cell Communication Analysis Using CellPhoneDB

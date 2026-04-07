@@ -2,7 +2,7 @@
 name: celltype-deconvolution
 title: Cell Type Deconvolution (RCTD)
 slug: celltype-deconvolution
-description: Perform cell type deconvolution (or annotation on spot) on spatial transcriptomics data (Visium spots) using RCTD with a single-cell reference dataset.
+description: Perform cell type deconvolution (or annotation on spot) on spatial transcriptomics data (Visium spots) using RCTD with a single-cell reference dataset. (Recommended for spot data)
 
 filter_requirements:
   num_slices: 1
@@ -13,6 +13,7 @@ prerequisites:
   - Annotated single-cell reference dataset path (.h5ad file)
   - Cell type column name in the reference dataset (default celltype)
   - Spatial data must contain raw UMI counts (not normalized)
+default_skill: true
 ---
 
 # Cell Type Deconvolution using RCTD

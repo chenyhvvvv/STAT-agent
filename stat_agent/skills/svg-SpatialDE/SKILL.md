@@ -11,6 +11,7 @@ filter_requirements:
 
 prerequisites:
   - No additional prerequisites
+default_skill: true
 ---
 
 # Spatially Variable Genes Using SpatialDE

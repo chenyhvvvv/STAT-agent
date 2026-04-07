@@ -13,6 +13,7 @@ prerequisites:
   - Source slice ID (the slice to be transformed)
   - Target slice ID (the reference slice, stays unchanged)
   - Matching landmark points between source and target (at least 3 pairs, as (source_x, source_y, target_x, target_y))
+default_skill: true
 ---
 
 # Spatial Alignment Using STalign
