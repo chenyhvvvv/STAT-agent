@@ -124,6 +124,34 @@ html, body {
   text-transform: none;
 }
 
+.form-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+.form-hint code {
+  background: var(--bg-muted);
+  padding: 0 3px;
+  border-radius: 2px;
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+}
+
+.form-hint-inline {
+  font-weight: 400;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.form-group select {
+  appearance: auto;
+  cursor: pointer;
+}
+
 .form-row {
   display: flex;
   align-items: center;

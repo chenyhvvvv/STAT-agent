@@ -18,6 +18,7 @@
         <div class="form-group">
           <label for="dataset-dir">Dataset Directory</label>
           <input type="text" id="dataset-dir" name="dataset_dir" placeholder="/path/to/dataset" required>
+          <span class="form-hint">Directory containing <code>.h5ad</code> AnnData file(s) with spatial coordinates (<code>obs['x'], obs['y']</code> or <code>obsm['spatial']</code>). Optional: tissue images (<code>.tif</code>, <code>.npy</code>).</span>
         </div>
         <div class="form-group">
           <label for="session-name">Session Name</label>
@@ -28,16 +29,33 @@
           <summary>LLM Configuration</summary>
           <div class="llm-config-body">
             <div class="form-group">
-              <label for="api-key">API Key</label>
-              <input type="password" id="api-key" name="api_key" placeholder="sk-...">
+              <label for="provider">Provider</label>
+              <select id="provider" name="provider">
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="poe">Poe</option>
+                <option value="google">Google (Gemini)</option>
+                <option value="deepseek">DeepSeek</option>
+                <option value="moonshot">Moonshot / Kimi</option>
+                <option value="xai">xAI (Grok)</option>
+                <option value="zhipu">Zhipu AI</option>
+                <option value="dashscope">DashScope (Qwen)</option>
+                <option value="custom">Custom / Other</option>
+              </select>
             </div>
             <div class="form-group">
               <label for="model">Model</label>
               <input type="text" id="model" name="model" placeholder="gpt-4o">
+              <span class="form-hint" id="model-hint">e.g. gpt-4o, gpt-4o-mini</span>
             </div>
             <div class="form-group">
-              <label for="base-url">Base URL <span class="optional">(optional)</span></label>
+              <label for="api-key">API Key <span class="form-hint-inline" id="api-key-env"></span></label>
+              <input type="password" id="api-key" name="api_key" placeholder="sk-...">
+            </div>
+            <div class="form-group">
+              <label for="base-url">Base URL <span class="optional">(auto-filled)</span></label>
               <input type="text" id="base-url" name="base_url" placeholder="https://api.openai.com/v1">
+              <span class="form-hint" id="base-url-hint">Auto-detected from provider. Override only if using a proxy or custom endpoint.</span>
             </div>
             <div class="form-row">
               <button type="button" id="test-llm-btn" class="btn-secondary">Test Connection</button>

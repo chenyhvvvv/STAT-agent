@@ -36,9 +36,49 @@
     skills: [],  // [{slug, title, description, enabled, ...}]
   };
 
+  // ---- Provider configuration ----
+  const PROVIDER_CONFIG = {
+    openai:     { models: 'gpt-4o, gpt-4o-mini, gpt-4.1, o3-mini', placeholder: 'gpt-4o', envKey: 'OPENAI_API_KEY', baseUrl: 'https://api.openai.com/v1' },
+    anthropic:  { models: 'anthropic/claude-sonnet-4, anthropic/claude-opus-4', placeholder: 'anthropic/claude-sonnet-4-20250514', envKey: 'ANTHROPIC_API_KEY', baseUrl: '' },
+    poe:        { models: 'poe/Claude-Sonnet-4.6, poe/GPT-4o', placeholder: 'poe/Claude-Sonnet-4.6', envKey: 'POE_API_KEY', baseUrl: 'https://api.poe.com/v1' },
+    google:     { models: 'gemini/gemini-2.5-pro, gemini/gemini-2.5-flash', placeholder: 'gemini/gemini-2.5-pro', envKey: 'GOOGLE_API_KEY', baseUrl: '' },
+    deepseek:   { models: 'deepseek/deepseek-chat, deepseek/deepseek-reasoner', placeholder: 'deepseek/deepseek-chat', envKey: 'DEEPSEEK_API_KEY', baseUrl: 'https://api.deepseek.com/v1' },
+    moonshot:   { models: 'moonshot/kimi-k2-0711-preview, moonshot/moonshot-v1-128k', placeholder: 'moonshot/kimi-k2-0711-preview', envKey: 'MOONSHOT_API_KEY', baseUrl: 'https://api.moonshot.cn/v1' },
+    xai:        { models: 'grok/grok-2, grok/grok-beta', placeholder: 'grok/grok-2', envKey: 'XAI_API_KEY', baseUrl: 'https://api.x.ai/v1' },
+    zhipu:      { models: 'zhipu/glm-4.5, zhipu/glm-4-plus', placeholder: 'zhipu/glm-4.5', envKey: 'ZAI_API_KEY', baseUrl: 'https://open.bigmodel.cn/api/paas/v4' },
+    dashscope:  { models: 'qwen-max, qwen-plus, qwq-plus', placeholder: 'qwen-max', envKey: 'DASHSCOPE_API_KEY', baseUrl: '' },
+    custom:     { models: 'Enter any model ID', placeholder: '', envKey: '', baseUrl: '' },
+  };
+
+  function onProviderChange() {
+    const provider = document.getElementById('provider').value;
+    const cfg = PROVIDER_CONFIG[provider] || PROVIDER_CONFIG.custom;
+    const modelInput = document.getElementById('model');
+    const baseUrlInput = document.getElementById('base-url');
+    const modelHint = document.getElementById('model-hint');
+    const apiKeyEnv = document.getElementById('api-key-env');
+    const baseUrlHint = document.getElementById('base-url-hint');
+
+    modelInput.placeholder = cfg.placeholder || 'model-name';
+    modelHint.textContent = 'e.g. ' + cfg.models;
+    apiKeyEnv.textContent = cfg.envKey ? '(' + cfg.envKey + ')' : '';
+
+    // Auto-fill base URL only if user hasn't manually typed something different
+    if (cfg.baseUrl) {
+      const current = baseUrlInput.value.trim();
+      const isAutoFilled = !current || Object.values(PROVIDER_CONFIG).some(c => c.baseUrl && c.baseUrl === current);
+      if (isAutoFilled) baseUrlInput.value = cfg.baseUrl;
+      baseUrlHint.textContent = 'Auto-filled. Override only for proxy or custom endpoint.';
+    } else {
+      baseUrlHint.textContent = provider === 'custom'
+        ? 'Required for custom providers.'
+        : 'Auto-detected. Leave empty unless using a custom endpoint.';
+    }
+  }
+
   // ---- localStorage helpers for form persistence ----
   const STORAGE_PREFIX = 'stat_';
-  const PERSISTED_FIELDS = ['dataset-dir', 'session-name', 'api-key', 'model', 'base-url'];
+  const PERSISTED_FIELDS = ['dataset-dir', 'session-name', 'api-key', 'model', 'base-url', 'provider'];
 
   function saveFormToStorage() {
     PERSISTED_FIELDS.forEach(id => {
@@ -53,6 +93,8 @@
       const saved = localStorage.getItem(STORAGE_PREFIX + id);
       if (el && saved) el.value = saved;
     });
+    // Update hints after restoring provider
+    onProviderChange();
   }
 
   // ---- Session reconnect on page refresh ----
@@ -2825,6 +2867,9 @@
       loadingEl.classList.add('hidden');
       submitBtn.disabled = false;
     });
+
+    // Provider dropdown
+    document.getElementById('provider').addEventListener('change', () => onProviderChange());
 
     // Test LLM
     document.getElementById('test-llm-btn').addEventListener('click', async () => {

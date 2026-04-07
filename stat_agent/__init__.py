@@ -8,7 +8,7 @@ An AI-powered platform for spatial omics analysis with multi-format support,
 interactive visualization, and intelligent code generation.
 """
 
-__version__ = "0.1.17"
+__version__ = "0.1.18"
 
 from stat_agent.core.session import SimpleSession
 from stat_agent.core.roi_manager import ROIManager, ROI
