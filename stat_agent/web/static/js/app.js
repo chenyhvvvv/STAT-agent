@@ -425,20 +425,9 @@
       logoutBtn.title = 'Discard all changes and reload a fresh demo session';
     }
 
-    // Inject a banner once
-    if (!document.getElementById('demo-banner')) {
-      const banner = document.createElement('div');
-      banner.id = 'demo-banner';
-      banner.style.cssText =
-        'background:#fff3cd;color:#664d03;border-bottom:1px solid #ffe69c;' +
-        'padding:6px 14px;font-size:12px;text-align:center;line-height:1.4';
-      banner.innerHTML =
-        '<strong>Public demo</strong> — single shared session; ' +
-        'click <em>Reset Demo</em> for a fresh start. ' +
-        'Do not upload sensitive data.';
-      document.body.insertBefore(banner, document.body.firstChild);
-    }
-
+    // The welcome modal carries the demo-notice copy; we previously also had
+    // a persistent banner, but it pushed the layout (which assumes 100vh) and
+    // hid the chat input below the viewport on smaller screens.
     showDemoWelcomeModal();
   }
 
