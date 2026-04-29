@@ -481,8 +481,20 @@
           <li>"Deconvolve the Visium spots in slice 2 with RCTD"</li>
         </ul>
 
+        <div style="background:#e8f5e9;border-left:3px solid #2e7d32;
+                    padding:10px 12px;margin:0 0 12px;border-radius:4px;
+                    font-size:13px">
+          <strong>Reference profile (for deconvolution).</strong>
+          A 26k-cell scRNA-seq reference is preloaded at
+          <code style="background:#fff;padding:1px 4px;border-radius:3px">data/ref/breast_cancer_reference.h5ad</code>
+          with cell-type column
+          <code style="background:#fff;padding:1px 4px;border-radius:3px">celltype</code>
+          (17 types matching the slices). Mention this path and column when the
+          agent asks during RCTD / cell2location-style workflows.
+        </div>
+
         <div style="background:#fff8e1;border-left:3px solid #f0b400;
-                    padding:10px 12px;margin:14px 0 12px;border-radius:4px;
+                    padding:10px 12px;margin:0 0 12px;border-radius:4px;
                     font-size:13px">
           <strong>Heads up — single shared session.</strong> Two simultaneous
           visitors will see each other's data. Click <em>Reset Demo</em> (top right)
