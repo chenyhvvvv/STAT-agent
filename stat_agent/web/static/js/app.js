@@ -110,6 +110,8 @@
         state.currentSliceId = res.summary.current_slice_id;
         state.currentModality = res.summary.current_modality || 'gene';
         state.initialized = true;
+        state.demoMode = res.demo_mode === true;
+        if (state.demoMode) applyDemoModeUI();
 
         document.getElementById('init-overlay').classList.add('hidden');
         document.getElementById('app').classList.remove('hidden');
@@ -382,6 +384,13 @@
     // Call backend reset to clear memory/session
     try { await api.resetSession(); } catch (_) {}
 
+    // In demo mode the backend re-initializes itself from env;
+    // a hard reload gives the cleanest fresh-session UX.
+    if (state.demoMode) {
+      window.location.reload();
+      return;
+    }
+
     // Reset state
     state.initialized = false;
     state.sessionSummary = null;
@@ -406,6 +415,94 @@
 
     // Restore saved form values
     loadFormFromStorage();
+  }
+
+  function applyDemoModeUI() {
+    // Swap logout button label to "Reset Demo"
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+      logoutBtn.textContent = 'Reset Demo';
+      logoutBtn.title = 'Discard all changes and reload a fresh demo session';
+    }
+
+    // Inject a banner once
+    if (!document.getElementById('demo-banner')) {
+      const banner = document.createElement('div');
+      banner.id = 'demo-banner';
+      banner.style.cssText =
+        'background:#fff3cd;color:#664d03;border-bottom:1px solid #ffe69c;' +
+        'padding:6px 14px;font-size:12px;text-align:center;line-height:1.4';
+      banner.innerHTML =
+        '<strong>Public demo</strong> — single shared session; ' +
+        'click <em>Reset Demo</em> for a fresh start. ' +
+        'Do not upload sensitive data.';
+      document.body.insertBefore(banner, document.body.firstChild);
+    }
+
+    showDemoWelcomeModal();
+  }
+
+  function showDemoWelcomeModal() {
+    if (document.getElementById('demo-welcome-modal')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'demo-welcome-modal';
+    overlay.style.cssText =
+      'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;' +
+      'display:flex;align-items:center;justify-content:center;padding:20px';
+
+    overlay.innerHTML = `
+      <div style="background:#fff;color:#222;max-width:560px;width:100%;
+                  border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,0.3);
+                  padding:28px 30px;font-size:14px;line-height:1.55;
+                  font-family:system-ui,-apple-system,sans-serif">
+        <h2 style="margin:0 0 12px;font-size:20px">
+          Welcome to the STAT Agent Demo
+        </h2>
+        <p style="margin:0 0 14px">
+          STAT is an AI agent for spatial transcriptomics analysis. Ask questions in
+          natural language and the agent will pick the right method, run it, and
+          show results in the viewer.
+        </p>
+
+        <h4 style="margin:14px 0 6px;font-size:13px;text-transform:uppercase;
+                   letter-spacing:0.5px;color:#666">Preloaded data</h4>
+        <p style="margin:0 0 14px">
+          Three breast-cancer slices: two single-cell slices (~268k cells) and one
+          Visium spot slice (~4.5k spots).
+        </p>
+
+        <h4 style="margin:14px 0 6px;font-size:13px;text-transform:uppercase;
+                   letter-spacing:0.5px;color:#666">Try asking</h4>
+        <ul style="margin:0 0 14px;padding-left:22px">
+          <li>"Show CD3D expression on slice 0"</li>
+          <li>"Find spatially variable genes"</li>
+          <li>"Run neighborhood enrichment between cell types"</li>
+          <li>"Deconvolve the Visium spots in slice 2"</li>
+        </ul>
+
+        <div style="background:#fff8e1;border-left:3px solid #f0b400;
+                    padding:10px 12px;margin:14px 0 18px;border-radius:4px;
+                    font-size:13px">
+          <strong>Heads up:</strong> this is a single shared session. Two simultaneous
+          visitors will see each other's data. Click <em>Reset Demo</em> (top right)
+          for a clean slate.
+        </div>
+
+        <div style="text-align:right">
+          <button id="demo-welcome-close"
+                  style="background:#4f46e5;color:#fff;border:0;padding:10px 22px;
+                         border-radius:6px;font-size:14px;cursor:pointer">
+            Got it
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    document.getElementById('demo-welcome-close').addEventListener('click', () => {
+      overlay.remove();
+    });
   }
 
   // ============================================================

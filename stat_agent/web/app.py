@@ -56,6 +56,169 @@ _pending_visual_events = []  # Visual events from clarification requests (no tur
 _chain_original_query = None  # Original user query for the current clarification chain
 
 
+def _is_demo_mode() -> bool:
+    """True when running as a public HF Spaces demo (STAT_DEMO_MODE=1)."""
+    return os.getenv("STAT_DEMO_MODE", "").strip() in ("1", "true", "True", "yes")
+
+
+def _cleanup_demo_logs(max_age_hours: Optional[float] = None) -> int:
+    """
+    Delete log session directories under logs/STAT_*/.
+
+    - max_age_hours=None: delete every dir except the currently-active one
+      (used after a demo reset).
+    - max_age_hours=N:    delete dirs older than N hours, except the active
+      one (used at startup to sweep abandoned sessions).
+    """
+    import shutil
+
+    logs_root = Path("logs")
+    if not logs_root.exists():
+        return 0
+
+    active_dir = None
+    if agent is not None:
+        try:
+            active_dir = Path(agent.notebook_logger.get_session_dir()).resolve()
+        except Exception:
+            pass
+
+    cutoff = (
+        datetime.now().timestamp() - max_age_hours * 3600
+        if max_age_hours is not None
+        else None
+    )
+
+    deleted = 0
+    for d in logs_root.glob("STAT_*"):
+        if not d.is_dir():
+            continue
+        try:
+            if active_dir and d.resolve() == active_dir:
+                continue
+            if cutoff is not None and d.stat().st_mtime >= cutoff:
+                continue
+            shutil.rmtree(d)
+            deleted += 1
+        except Exception as e:
+            logger.warning(f"Failed to clean log dir {d}: {e}")
+
+    if deleted:
+        logger.info(f"[demo] Cleaned up {deleted} old log dir(s)")
+    return deleted
+
+
+def _ensure_demo_data() -> Optional[str]:
+    """
+    Make sure the demo dataset directory exists locally, downloading from
+    a public HF Dataset repo if STAT_DEMO_HF_DATASET is set.
+
+    Returns the local dataset dir on success, or None on failure.
+    """
+    dataset_dir = os.getenv("STAT_DEMO_DATA_DIR")
+    if not dataset_dir:
+        logger.warning("STAT_DEMO_DATA_DIR not set; cannot auto-init session")
+        return None
+
+    dataset_path = Path(dataset_dir)
+    has_h5ad = dataset_path.exists() and any(dataset_path.glob("*.h5ad"))
+    if has_h5ad:
+        return str(dataset_path)
+
+    hf_repo = os.getenv("STAT_DEMO_HF_DATASET")
+    if not hf_repo:
+        logger.error(
+            f"Demo data dir empty ({dataset_dir}) and STAT_DEMO_HF_DATASET not set"
+        )
+        return None
+
+    try:
+        from huggingface_hub import snapshot_download
+    except ImportError:
+        logger.error("huggingface_hub not installed; cannot download demo data")
+        return None
+
+    logger.info(f"[demo] Downloading dataset from HF: {hf_repo} -> {dataset_dir}")
+    dataset_path.mkdir(parents=True, exist_ok=True)
+    try:
+        snapshot_download(
+            repo_id=hf_repo,
+            repo_type="dataset",
+            local_dir=str(dataset_path),
+            allow_patterns=["*.h5ad", "*.tif", "*.tiff", "*.npy", "*.json", "*.yaml"],
+        )
+        logger.info(f"[demo] Download complete: {list(dataset_path.glob('*.h5ad'))}")
+        return str(dataset_path)
+    except Exception as e:
+        logger.error(f"[demo] HF dataset download failed: {e}")
+        return None
+
+
+def _init_session_from_env(session_name: str = "demo_session") -> bool:
+    """
+    Initialize the global session+agent from environment variables.
+
+    Used at startup in demo mode and again after /api/session/reset in demo mode.
+    Returns True on success, False otherwise. Errors are logged, not raised.
+    """
+    global session, agent, llm_config
+
+    dataset_dir = _ensure_demo_data()
+    if not dataset_dir:
+        return False
+
+    try:
+        logger.info(f"[demo] Auto-initializing session from {dataset_dir}")
+        session = SimpleSession(name=session_name)
+        session.load_dataset(dataset_dir)
+
+        if AGENT_AVAILABLE:
+            api_key = (
+                os.getenv("POE_API_KEY")
+                or os.getenv("OPENAI_API_KEY")
+                or os.getenv("ANTHROPIC_API_KEY")
+            )
+            model = os.getenv("SPATIAL_AGENT_MODEL", "poe/Claude-Sonnet-4.6")
+            base_url = os.getenv("SPATIAL_AGENT_BASE_URL")
+
+            if api_key:
+                agent_kwargs = {
+                    "model": model,
+                    "api_key": api_key,
+                    "session": session,
+                    "enable_planning": True,
+                    "enable_skills": True,
+                }
+                if base_url:
+                    agent_kwargs["endpoint"] = base_url
+                agent = SpatialAgent(**agent_kwargs)
+
+                llm_config = {"api_key": api_key, "model": model, "base_url": base_url}
+                session.llm_config = llm_config
+
+                agent.notebook_logger.initialize_notebook(
+                    dataset_path=dataset_dir, llm_config=llm_config
+                )
+                agent.prompt_logger.set_session_dir(
+                    agent.notebook_logger.get_session_dir()
+                )
+                logger.info(f"[demo] Agent initialized with model={model}")
+            else:
+                logger.warning("[demo] No API key in env; agent disabled")
+                agent = None
+                llm_config = None
+
+        return True
+    except Exception as e:
+        logger.error(f"[demo] Auto-init failed: {e}")
+        import traceback
+        traceback.print_exc()
+        session = None
+        agent = None
+        llm_config = None
+        return False
+
+
 @app.route('/')
 def index():
     """Serve the main UI."""
@@ -294,6 +457,7 @@ def get_session_summary():
             'summary': summary,
             'agent_active': agent is not None,
             'chat_busy': chat_busy,
+            'demo_mode': _is_demo_mode(),
         })
     except Exception as e:
         return jsonify({
@@ -1857,7 +2021,7 @@ def skill_detail(slug):
 
 @app.route('/api/session/reset', methods=['POST'])
 def reset_session():
-    """Reset session and agent state (logout)."""
+    """Reset session and agent state (logout). In demo mode, re-init from env."""
     global session, agent
 
     try:
@@ -1865,13 +2029,18 @@ def reset_session():
             agent.reset()
         agent = None
         session = None
-        return jsonify({'success': True})
     except Exception as e:
         logger.error(f"Failed to reset session: {e}")
-        # Still clear refs even if reset() throws
         agent = None
         session = None
-        return jsonify({'success': True})
+
+    if _is_demo_mode():
+        # Public demo: never leave the app stateless — always re-init from env
+        ok = _init_session_from_env()
+        # Delete the previous session's log dir (and any other stale ones)
+        _cleanup_demo_logs(max_age_hours=None)
+        return jsonify({'success': True, 'reinitialized': ok, 'demo_mode': True})
+    return jsonify({'success': True})
 
 
 @app.route('/api/chat/save', methods=['GET'])
@@ -2376,13 +2545,19 @@ def main():
 
     parser = argparse.ArgumentParser(description='Simplified Spatial Agent Web Interface')
     parser.add_argument('--host', default='0.0.0.0', help='Host to bind to')
-    parser.add_argument('--port', type=int, default=5000, help='Port to bind to')
+    parser.add_argument('--port', type=int, default=int(os.getenv('PORT', 5000)), help='Port to bind to')
     parser.add_argument('--debug', action='store_true', help='Enable debug mode')
     parser.add_argument('--jupyter-port', type=int, default=8890, help='Jupyter Lab port')
 
     args = parser.parse_args()
 
     app.config['JUPYTER_PORT'] = args.jupyter_port
+
+    if _is_demo_mode():
+        logger.info("[demo] STAT_DEMO_MODE=1 — auto-initializing session from env")
+        _init_session_from_env()
+        # Sweep any log dirs left behind by abandoned tabs in the previous run.
+        _cleanup_demo_logs(max_age_hours=6.0)
 
     logger.info(f"Starting Simplified Spatial Agent Web Interface on {args.host}:{args.port}")
     logger.info(f"Access the interface at: http://localhost:{args.port}")

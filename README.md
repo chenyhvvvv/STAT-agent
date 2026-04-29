@@ -1,3 +1,14 @@
+---
+title: STAT Agent Demo
+emoji: 🧬
+colorFrom: indigo
+colorTo: pink
+sdk: docker
+app_port: 7860
+pinned: false
+short_description: AI agent for spatial transcriptomics analysis
+---
+
 # STAT
 
 **Spatial Transcriptomics Analytical agenT**
