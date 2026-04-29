@@ -425,6 +425,11 @@
       logoutBtn.title = 'Discard all changes and reload a fresh demo session';
     }
 
+    // Notebook button opens Jupyter Lab on port 8890, which isn't reachable
+    // on HF Spaces (only the app's own port 7860 is exposed).
+    const notebookBtn = document.getElementById('notebook-btn');
+    if (notebookBtn) notebookBtn.style.display = 'none';
+
     // The welcome modal carries the demo-notice copy; we previously also had
     // a persistent banner, but it pushed the layout (which assumes 100vh) and
     // hid the chat input below the viewport on smaller screens.
@@ -467,15 +472,25 @@
           <li>"Show CD3D expression on slice 0"</li>
           <li>"Find spatially variable genes"</li>
           <li>"Run neighborhood enrichment between cell types"</li>
-          <li>"Deconvolve the Visium spots in slice 2"</li>
+          <li>"Deconvolve the Visium spots in slice 2 with RCTD"</li>
         </ul>
 
         <div style="background:#fff8e1;border-left:3px solid #f0b400;
-                    padding:10px 12px;margin:14px 0 18px;border-radius:4px;
+                    padding:10px 12px;margin:14px 0 12px;border-radius:4px;
                     font-size:13px">
-          <strong>Heads up:</strong> this is a single shared session. Two simultaneous
+          <strong>Heads up — single shared session.</strong> Two simultaneous
           visitors will see each other's data. Click <em>Reset Demo</em> (top right)
           for a clean slate.
+        </div>
+
+        <div style="background:#eef4ff;border-left:3px solid #4f46e5;
+                    padding:10px 12px;margin:0 0 18px;border-radius:4px;
+                    font-size:13px">
+          <strong>Compute limits.</strong> This Space runs on a free CPU-only
+          tier (2 vCPU, 16 GB RAM, no GPU). Methods relying on PyTorch
+          (scVI/scANVI, SpaGCN, GraphST, STAGATE, Tangram, cell2location) are
+          disabled. Heavy analyses take longer than on a workstation —
+          please be patient.
         </div>
 
         <div style="text-align:right">

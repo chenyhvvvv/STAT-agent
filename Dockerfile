@@ -55,9 +55,12 @@ RUN pip install --user \
 
 # Demo configuration — secrets (POE_API_KEY) come from HF Space settings at runtime.
 # POE provider is auto-detected from the `poe/` model prefix.
+# STAT_DEMO_DISABLED_SKILLS: skills whose deps weren't installed (torch-only methods
+# on the CPU-only HF Spaces tier). The agent won't propose these.
 ENV STAT_DEMO_MODE=1 \
     STAT_DEMO_DATA_DIR=/home/user/app/data \
     STAT_DEMO_HF_DATASET=CyhVVVV/stat-agent-demo-data \
+    STAT_DEMO_DISABLED_SKILLS=celltype-annotation-scanvi,spatial-domain-spagcn \
     SPATIAL_AGENT_MODEL=poe/Claude-Sonnet-4.6 \
     HF_HOME=/tmp/huggingface \
     PORT=7860

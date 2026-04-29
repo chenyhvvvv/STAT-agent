@@ -202,6 +202,16 @@ def _init_session_from_env(session_name: str = "demo_session") -> bool:
                 agent.prompt_logger.set_session_dir(
                     agent.notebook_logger.get_session_dir()
                 )
+
+                # Disable skills whose deps aren't installed in the demo image
+                # (typically torch-only methods on the CPU-only HF Spaces tier).
+                extra_disabled = os.getenv("STAT_DEMO_DISABLED_SKILLS", "")
+                for slug in (s.strip().lower() for s in extra_disabled.split(",")):
+                    if slug:
+                        agent.disable_skill(slug)
+                if extra_disabled:
+                    logger.info(f"[demo] Additionally disabled skills: {extra_disabled}")
+
                 logger.info(f"[demo] Agent initialized with model={model}")
             else:
                 logger.warning("[demo] No API key in env; agent disabled")
