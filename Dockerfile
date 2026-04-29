@@ -40,7 +40,7 @@ RUN pip install --user \
     'harmonypy>=0.0.9' \
     'bbknn>=1.5.0' \
     'scanorama>=1.7.0' \
-    'qpsolvers>=4.0' \
+    'qpsolvers[osqp]>=4.0' \
     'ray>=2.0' \
     'flashdeconv>=0.1.0' \
     'palantir>=1.0.0' \
