@@ -2273,10 +2273,10 @@
     appendToAssistantMsg(`<div class="clarification-ui"><div class="question">${escapeHtml(msg)}</div><div class="clarification-options">${optHtml}</div></div>`);
 
     setTimeout(() => {
-      state.currentAssistantMsg.querySelectorAll('.clarification-option-btn').forEach(btn => {
+      state.currentAssistantMsg.querySelectorAll('.clarification-option-btn:not([data-bound])').forEach(btn => {
+        btn.setAttribute('data-bound', '1');
         btn.addEventListener('click', () => {
           const val = btn.dataset.value;
-          // Disable all buttons after selection
           btn.closest('.clarification-options').querySelectorAll('button').forEach(b => b.disabled = true);
           btn.classList.add('active');
           sendClarificationReply(val);
@@ -2303,8 +2303,9 @@
     appendToAssistantMsg(html);
 
     setTimeout(() => {
-      // Option buttons
-      state.currentAssistantMsg.querySelectorAll('.clarification-option-btn').forEach(btn => {
+      // Option buttons — only bind unbound ones
+      state.currentAssistantMsg.querySelectorAll('.clarification-option-btn:not([data-bound])').forEach(btn => {
+        btn.setAttribute('data-bound', '1');
         btn.addEventListener('click', () => {
           const val = btn.dataset.value;
           btn.closest('.clarification-options').querySelectorAll('button').forEach(b => b.disabled = true);
@@ -2312,9 +2313,11 @@
           sendClarificationReply(val);
         });
       });
-      // Free-text submit
-      const submitBtn = state.currentAssistantMsg.querySelector('.clarification-submit');
+      // Free-text submit — bind only the latest unbound one
+      const allSubmits = state.currentAssistantMsg.querySelectorAll('.clarification-submit:not([data-bound])');
+      const submitBtn = allSubmits.length ? allSubmits[allSubmits.length - 1] : null;
       if (submitBtn) {
+        submitBtn.setAttribute('data-bound', '1');
         const input = submitBtn.previousElementSibling;
         submitBtn.addEventListener('click', () => {
           if (input.value.trim()) {
@@ -2346,8 +2349,10 @@
     appendToAssistantMsg(html);
 
     setTimeout(() => {
-      const submitBtn = state.currentAssistantMsg.querySelector('.prereq-submit');
+      const allSubmits = state.currentAssistantMsg.querySelectorAll('.prereq-submit:not([data-bound])');
+      const submitBtn = allSubmits.length ? allSubmits[allSubmits.length - 1] : null;
       if (submitBtn) {
+        submitBtn.setAttribute('data-bound', '1');
         submitBtn.addEventListener('click', () => {
           const inputs = submitBtn.closest('.clarification-ui').querySelectorAll('.prereq-input');
           const answers = Array.from(inputs).map(inp => inp.value).join(', ');
