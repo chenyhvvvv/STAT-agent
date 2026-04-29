@@ -426,9 +426,15 @@
     }
 
     // Notebook button opens Jupyter Lab on port 8890, which isn't reachable
-    // on HF Spaces (only the app's own port 7860 is exposed).
+    // on HF Spaces (only the app's own port 7860 is exposed). Show but disable.
     const notebookBtn = document.getElementById('notebook-btn');
-    if (notebookBtn) notebookBtn.style.display = 'none';
+    if (notebookBtn) {
+      notebookBtn.disabled = true;
+      notebookBtn.style.opacity = '0.45';
+      notebookBtn.style.cursor = 'not-allowed';
+      notebookBtn.title = 'Jupyter Lab is not exposed on the public demo. ' +
+        'Run STAT locally to use the notebook view.';
+    }
 
     // The welcome modal carries the demo-notice copy; we previously also had
     // a persistent banner, but it pushed the layout (which assumes 100vh) and
