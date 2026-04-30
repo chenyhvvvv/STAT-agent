@@ -381,11 +381,16 @@
   }
 
   async function logout() {
+    // In demo mode the reset takes several seconds (clear session, re-load
+    // 3 slices, re-init agent) and the page then hard-reloads. Show an
+    // overlay synchronously so the user gets immediate feedback.
+    if (state.demoMode) {
+      showDemoResetOverlay();
+    }
+
     // Call backend reset to clear memory/session
     try { await api.resetSession(); } catch (_) {}
 
-    // In demo mode the backend re-initializes itself from env;
-    // a hard reload gives the cleanest fresh-session UX.
     if (state.demoMode) {
       window.location.reload();
       return;
@@ -440,6 +445,31 @@
     // a persistent banner, but it pushed the layout (which assumes 100vh) and
     // hid the chat input below the viewport on smaller screens.
     showDemoWelcomeModal();
+  }
+
+  function showDemoResetOverlay() {
+    if (document.getElementById('demo-reset-overlay')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'demo-reset-overlay';
+    overlay.style.cssText =
+      'position:fixed;inset:0;background:rgba(255,255,255,0.92);z-index:10000;' +
+      'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+      'font-family:system-ui,-apple-system,sans-serif;color:#222';
+    overlay.innerHTML = `
+      <div style="width:46px;height:46px;border:4px solid #e5e7eb;
+                  border-top-color:#4f46e5;border-radius:50%;
+                  animation:demo-spin 0.9s linear infinite;margin-bottom:18px"></div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:6px">
+        Resetting demo session…
+      </div>
+      <div style="font-size:13px;color:#666">
+        Clearing state and reloading the dataset. This takes a few seconds.
+      </div>
+      <style>
+        @keyframes demo-spin { to { transform: rotate(360deg); } }
+      </style>
+    `;
+    document.body.appendChild(overlay);
   }
 
   function showDemoWelcomeModal() {
