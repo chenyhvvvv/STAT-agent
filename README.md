@@ -1,65 +1,97 @@
-# STAT
+---
+title: STAT Agent Demo
+emoji: 🧬
+colorFrom: indigo
+colorTo: pink
+sdk: docker
+app_port: 7860
+pinned: false
+short_description: AI agent for spatial transcriptomics analysis
+---
 
-**Spatial Transcriptomics Analytical agenT**
+<!-- BANNER -->
 
-An AI-powered platform for spatial omics analysis with multi-format support, interactive visualization, and intelligent code generation.
+<div align="center">
 
-## Features
+# STAT — Spatial Transcriptomics Analytical agenT
 
-- **AI Agent**: Natural language interface for spatial transcriptomics analysis — ask questions, get results
-- **Multi-format support**: Single-slice, multi-slice, and multi-omics (gene + protein) datasets
-- **Interactive viewer**: Canvas-based spatial visualization with zoom/pan, ROI drawing, and cell overlays
-- **Skill system**: Extensible analysis skills (cell type annotation, deconvolution, spatial domains, etc.)
-- **Code execution**: Agent generates and runs analysis code in a sandboxed environment
-- **Multi-provider LLM**: Works with OpenAI, Anthropic, Google, Deepseek, and Poe
+Ask in natural language, get a planned, verified, and executed analysis of spatial omics data.
+
+[![PyPI version](https://img.shields.io/pypi/v/stat-agent.svg?color=blue)](https://pypi.org/project/stat-agent/)
+[![bioRxiv](https://img.shields.io/badge/bioRxiv-10.64898%2F2026.05.01.722244-b31b1b.svg)](https://doi.org/10.64898/2026.05.01.722244)
+[![HuggingFace Spaces](https://img.shields.io/badge/🤗_Demo-HF_Spaces-yellow.svg)](https://huggingface.co/spaces/CyhVVVV/stat-agent-demo)
+
+</div>
+
+
+## Table of contents
+
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Data format](#data-format)
+- [Built-in skills](#built-in-skills)
+- [LLM providers](#llm-providers)
+- [Reproducing the paper](#reproducing-the-paper)
+- [License](#license)
 
 ## Installation
+
+Stable release from PyPI:
 
 ```bash
 pip install stat-agent
 ```
 
-With all analysis skill dependencies (squidpy, scvi-tools, torch, liana, etc.):
+With the full set of analysis skill dependencies (squidpy, scvi-tools, torch, liana, cell2location, …):
 
 ```bash
 pip install "stat-agent[skills]"
 ```
 
-## Quick Start
-
-### Web Interface
+Some skills require packages that aren't on PyPI or have conflict with other pacakges; install separately as needed:
 
 ```bash
-stat-web
-# Open http://localhost:8889
+# STAGATE (requires PyG + matching torch_geometric/torch_sparse/torch_scatter wheels)
+pip install git+https://github.com/QIFEIDKN/STAGATE_pyG.git
 ```
 
-Or with the startup script (includes Jupyter Lab):
+## Quick start
+
+### Web interface
 
 ```bash
-./start_web.sh
+stat-web                    # serves on http://localhost:8889
+# or
+./start_web.sh              # also starts a Jupyter Lab alongside
 ```
 
-### In the web UI:
+In the UI:
 
-1. Enter path to your dataset directory
-2. Configure LLM (API key, model)
-3. Click "Load Dataset"
-4. Ask questions in the chat panel: *"Annotate cell types"*, *"Find spatially variable genes"*, *"Show BRCA1 expression"*
+1. Enter the path to your dataset directory.
+2. Configure your LLM provider and paste an API key.
+3. Click **Load Dataset**.
+4. Ask questions in the chat panel:
+   - *"Annotate cell types using the breast-cancer reference."*
+   - *"Find spatially variable genes."*
+   - *"Show CD8A expression in slice 1."*
+   - *"Run RCTD deconvolution and overlay the dominant cell type."*
 
-## Data Format
 
-STAT auto-detects your data layout. Place files in a single directory:
+## Data format
 
-**Single-slice:**
-```
+STAT auto-detects your data layout. Place files in a single directory.
+
+**Single-slice**
+
+```text
 dataset/
-├── tissue.h5ad          # Required: AnnData with x, y coordinates in obs
+├── tissue.h5ad          # Required: AnnData with x, y in obs
 └── he.tif               # Optional: H&E image (pixel coords = cell coords)
 ```
 
-**Multi-slice:**
-```
+**Multi-slice**
+
+```text
 dataset/
 ├── tissue_slice_0.h5ad
 ├── he_slice_0.tif
@@ -67,72 +99,131 @@ dataset/
 └── he_slice_1.tif
 ```
 
-**Multi-omics:**
-```
+**Multi-omics (gene + protein)**
+
+```text
 dataset/
 ├── tissue.h5ad          # Gene expression
 ├── tissue_protein.h5ad  # Protein expression
 ├── he.tif
 └── protein_CD3.tif
-```
+``` 
 
-**Key**: Cell coordinates `(x, y)` in `adata.obs` map directly to image pixels `(x, y)`. No coordinate transformation needed.
+**Coordinate convention.** Cell coordinates `(x, y)` in `adata.obs` map directly to image pixel `(x, y)`. No coordinate transformation, no `spatialdata` dependency. Note the array indexing swap: image array `img[y, x]` corresponds to cell `(x, y)`.
 
-## Built-in Skills
+**Required AnnData fields:** `adata.obs['x']`, `adata.obs['y']`, and the expression matrix `adata.X`. `adata.obs['celltype']` is *optional* — annotation skills will populate it.
 
-| Skill | Description |
-|-------|-------------|
-| Cell Type Annotation (GPT) | Unsupervised clustering + LLM-based annotation |
-| Cell Type Annotation (scANVI) | Transfer learning from scRNA-seq reference |
-| Deconvolution (RCTD) | Spot-level cell type deconvolution |
-| Spatial Domains (SpaGCN) | Graph-based spatial domain identification |
-| SVG (SpatialDE) | Spatially variable gene detection |
-| Neighborhood Enrichment | Cell type co-localization analysis |
-| Cell Communication (LIANA+) | Ligand-receptor interaction analysis |
-| Cell Communication (CellPhoneDB) | Permutation-based interaction testing |
-| GO Enrichment | Gene Ontology pathway analysis |
-| Niche Detection (Harmonics) | Spatial niche identification |
-| Integration (Harmony) | Multi-slice batch correction |
-| Alignment (STalign) | Spatial slice alignment |
+## Built-in skills
 
-## Architecture
+Skills are auto-discovered from `stat_agent/skills/{slug}/SKILL.md`. Each skill carries metadata (modalities, data level, prerequisites) and a templated code body. The current catalog:
 
-```
-User Query → QueryPlanner → SkillFilter → LLM Matching → SkillVerifier → Code Generation → Execution
-```
+<!-- SKILLS-TABLE-START -->
+### Cell type annotation
 
-- **QueryPlanner**: Determines target slices, breaks complex queries into steps
-- **SkillFilter**: Programmatic filtering by modality, data level, number of slices
-- **SkillVerifier**: Checks prerequisites, requests missing information
-- **SpatialAgent**: Generates analysis code using skill instructions + session context
-- **CodeExecutor**: Sandboxed execution with state change detection
+| Skill | Summary |
+| --- | --- |
+| [Cell Type Annotation with scANVI](stat_agent/skills/celltype-annotation-scANVI/SKILL.md) | Annotate cell types in spatial transcriptomics data using scANVI transfer learning from a reference scRNA-seq dataset. |
+| [Fast Cell Type Annotation (Clustering + LLM)](stat_agent/skills/celltype-annotation-GPT/SKILL.md) | Annotate cell types using unsupervised clustering, marker genes, and LLM-based annotation. |
+| [Cell Type Annotation via Spatial Mapping (Tangram)](stat_agent/skills/annotation-tangram/SKILL.md) | Map single-cell reference annotations onto spatial transcriptomics data using Tangram deep learning alignment. |
 
-## Project Structure
+### Spot deconvolution
 
-```
-stat_agent/
-├── core/                  # Data layer
-│   ├── session.py         # Multi-slice/multi-omics session
-│   ├── data_slice.py      # Single data slice wrapper
-│   └── roi_manager.py     # ROI geometry management
-├── agent/                 # Agent pipeline
-│   ├── spatial_agent_core.py
-│   ├── conversation_orchestrator.py
-│   ├── pipeline_executor.py
-│   ├── query_planner.py
-│   ├── skill_registry.py
-│   ├── skill_filter.py
-│   ├── skill_verifier.py
-│   ├── llm_backend.py
-│   └── memory.py
-└── functions/
-    └── io.py              # Data loading
-.claude/skills/            # Skill definitions (SKILL.md + helper libs)
-web_interface.py           # Flask backend + API endpoints
-static/                    # Frontend (JS + CSS)
-templates/                 # HTML templates
-```
+| Skill | Summary |
+| --- | --- |
+| [Cell Type Deconvolution (RCTD)](stat_agent/skills/celltype-deconvolution-RCTD/SKILL.md) | Perform cell type deconvolution (or annotation on spot) on spatial transcriptomics data (Visium spots) using RCTD with a single-cell refere… |
+| [Bayesian Cell Type Deconvolution (Cell2location)](stat_agent/skills/deconvolution-cell2location/SKILL.md) | Reference-based Bayesian deconvolution of spot-level spatial transcriptomics using Cell2location. |
+| [Fast Spot Deconvolution (FlashDeconv)](stat_agent/skills/deconvolution-flashdeconv/SKILL.md) | Ultra-fast reference-based cell type deconvolution for spot-level spatial data using FlashDeconv. |
+
+### Spatial domains
+
+| Skill | Summary |
+| --- | --- |
+| [Spatial Domain Detection (SpaGCN)](stat_agent/skills/spatial-domain-SpaGCN/SKILL.md) | Identify spatial domains in spot-level spatial transcriptomics data using SpaGCN, integrating gene expression, spatial location, and H&E hi… |
+| [Spatial Domain Detection (STAGATE)](stat_agent/skills/spatial-domain-STAGATE/SKILL.md) | Identify spatial domains using STAGATE (Spatial-Transcriptomics Graph Attention Auto-Encoder). |
+| [Spatial Domain Detection (GraphST)](stat_agent/skills/spatial-domain-GraphST/SKILL.md) | Identify spatial domains in spot-level data using GraphST (Graph Self-supervised Transformer). |
+
+### Spatial statistics & niches
+
+| Skill | Summary |
+| --- | --- |
+| [Spatial Statistics Analysis](stat_agent/skills/spatial-statistics-squidpy/SKILL.md) | Compute spatial statistics including Moran's I (spatial autocorrelation of genes), Ripley's K (spatial point pattern of cell types), co-occ… |
+| [Neighborhood Enrichment Analysis](stat_agent/skills/spatial-stats-neighborhood-enrichment/SKILL.md) | Compute neighborhood enrichment z-scores to identify which cell types are spatially co-localized or depleted from each other's neighborhood… |
+| [Spatial Niche Detection](stat_agent/skills/niche-detection-Harmonics/SKILL.md) | Identify spatial cellular niches using Harmonics hierarchical model. |
+| [Spatially Variable Genes (SpatialDE)](stat_agent/skills/svg-SpatialDE/SKILL.md) | Identify spatially variable genes using SpatialDE Gaussian process regression. |
+
+### Differential expression & pathway
+
+| Skill | Summary |
+| --- | --- |
+| [Differential Gene Expression Analysis](stat_agent/skills/differential-expression/SKILL.md) | Find differentially expressed marker genes between groups using scanpy rank_genes_groups with Wilcoxon test. |
+| [GO Enrichment Analysis](stat_agent/skills/pathway-GO-enrichment/SKILL.md) | Find enriched Gene Ontology (GO) terms for a user-provided gene list. |
+| [Over-Representation & Pathway Enrichment Analysis (ORA)](stat_agent/skills/enrichment-ora-ssgsea/SKILL.md) | Test whether a gene list is enriched for specific pathways or gene sets using Over-Representation Analysis (Fisher's exact test). |
+| [Per-Cell Pathway Activity Scoring (ssGSEA)](stat_agent/skills/pathway-ssgsea/SKILL.md) | Compute per-cell pathway activity scores using single-sample Gene Set Enrichment Analysis (ssGSEA). |
+| [Two-Group Pathway Enrichment Comparison](stat_agent/skills/pathway-enrichment-compare/SKILL.md) | Compare pathway / gene-set enrichment between two user-provided gene lists (typically markers of two cell populations, clusters, or conditi… |
+
+### Cell-cell communication
+
+| Skill | Summary |
+| --- | --- |
+| [Cell-Cell Communication Analysis (LIANA+)](stat_agent/skills/cell-communication-LIANA/SKILL.md) | Analyze cell-cell communication using LIANA+ to identify significant ligand-receptor interactions between cell types. |
+| [Cell-Cell Communication Analysis (CellPhoneDB)](stat_agent/skills/cell-communication-CellPhoneDB/SKILL.md) | Analyze cell-cell communication using CellPhoneDB statistical method to identify significant ligand-receptor interactions between cell type… |
+
+### Multi-slice integration
+
+| Skill | Summary |
+| --- | --- |
+| [Batch Integration (Harmony)](stat_agent/skills/integration-Harmony/SKILL.md) | Integrate multiple spatial transcriptomics slices using Harmony batch correction. |
+| [Batch Integration (BBKNN)](stat_agent/skills/integration-bbknn/SKILL.md) | Correct batch effects across multiple slices using BBKNN (Batch Balanced K-Nearest Neighbors). |
+| [Batch Integration (Scanorama)](stat_agent/skills/integration-scanorama/SKILL.md) | Correct batch effects across multiple slices using Scanorama panoramic stitching. |
+
+### Slice alignment & registration
+
+| Skill | Summary |
+| --- | --- |
+| [Spatial Alignment (STalign)](stat_agent/skills/alignment-STalign/SKILL.md) | Align two cell-level spatial transcriptomics slices using STalign. |
+| [Slice Registration (PASTE)](stat_agent/skills/registration-paste/SKILL.md) | Align multiple spatial transcriptomics slices using PASTE (Probabilistic Alignment of ST Experiments). |
+
+### CNV inference & trajectory
+
+| Skill | Summary |
+| --- | --- |
+| [Expression-based CNV Inference (infercnvpy)](stat_agent/skills/cnv-infercnvpy/SKILL.md) | Infer copy number variations (CNVs) from gene expression data using infercnvpy. |
+| [Pseudotime Trajectory Analysis (Palantir / DPT)](stat_agent/skills/trajectory-palantir-dpt/SKILL.md) | Infer cell developmental trajectories and pseudotime ordering using expression-based methods. |
+
+<!-- SKILLS-TABLE-END -->
+
+**Adding a new skill.** Create `stat_agent/skills/<your-slug>/SKILL.md` with YAML frontmatter (`name`, `title`, `description`, `filter_requirements`, `prerequisites`, optional `default_skill`), then write the analysis instructions and code template in the body. The registry will pick it up at startup. <!-- TODO: link to a CONTRIBUTING_SKILLS.md once written -->
+
+## LLM providers
+
+STAT supports multiple providers via a unified `LLMBackend`. Set the provider, model, and API key in the web UI's *Configure LLM* panel, or via environment variables:
+
+| Provider | Env var | Example model |
+| --- | --- | --- |
+| Anthropic | `ANTHROPIC_API_KEY` | `claude-opus-4-7`, `claude-sonnet-4-6` |
+| OpenAI | `OPENAI_API_KEY` | `gpt-4o`, `gpt-4o-mini` |
+| Google | `GOOGLE_API_KEY` | <!-- TODO: fill supported Gemini model id --> |
+| Deepseek | `DEEPSEEK_API_KEY` | <!-- TODO: fill supported model id --> |
+| Poe | `POE_API_KEY` | <!-- TODO: fill supported model id --> |
+
+> **Tip.** For long-context analysis tasks, models with 128k+ context windows are strongly recommended.
+
+## Reproducing the paper
+
+The analyses, figures, and benchmarks from the STAT paper live in a separate repository:
+
+<!-- TODO: replace with the public PaperRepro URL once it is pushed -->
+
+> **PaperRepro** — `https://github.com/<org>/STAT-PaperRepro`
+
+It includes:
+
+- _Breast cancer case study_ — <!-- TODO: 1-line summary -->
+- _Colorectal cancer case study_ — <!-- TODO: 1-line summary -->
+- _Benchmarking_ — <!-- TODO: 1-line summary -->
+- _Ablation study_ — <!-- TODO: 1-line summary -->
+
 
 ## License
 
-BSD-3-Clause
+[BSD-3-Clause](LICENSE) © STAT contributors.
