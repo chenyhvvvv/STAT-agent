@@ -173,13 +173,25 @@ def _init_session_from_env(session_name: str = "demo_session") -> bool:
         session.load_dataset(dataset_dir)
 
         if AGENT_AVAILABLE:
-            api_key = (
-                os.getenv("POE_API_KEY")
-                or os.getenv("OPENAI_API_KEY")
-                or os.getenv("ANTHROPIC_API_KEY")
-            )
-            model = os.getenv("SPATIAL_AGENT_MODEL", "poe/Claude-Sonnet-4.6")
+            model = os.getenv("SPATIAL_AGENT_MODEL", "anthropic/claude-opus-4-7")
             base_url = os.getenv("SPATIAL_AGENT_BASE_URL")
+
+            # Pick the API key matching the provider in the model prefix; fall
+            # back to whichever provider's key is set if the prefix is missing.
+            provider_keys = {
+                "anthropic": "ANTHROPIC_API_KEY",
+                "openai": "OPENAI_API_KEY",
+                "poe": "POE_API_KEY",
+                "google": "GOOGLE_API_KEY",
+                "deepseek": "DEEPSEEK_API_KEY",
+            }
+            prefix = model.split("/", 1)[0].lower() if "/" in model else None
+            api_key = os.getenv(provider_keys[prefix]) if prefix in provider_keys else None
+            if not api_key:
+                for env_name in provider_keys.values():
+                    api_key = os.getenv(env_name)
+                    if api_key:
+                        break
 
             if api_key:
                 agent_kwargs = {

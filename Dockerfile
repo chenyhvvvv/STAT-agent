@@ -53,15 +53,16 @@ RUN pip install --user \
     'POT>=0.9.0,<0.9.6' \
     'pynrrd>=1.0'
 
-# Demo configuration — secrets (POE_API_KEY) come from HF Space settings at runtime.
-# POE provider is auto-detected from the `poe/` model prefix.
+# Demo configuration — secrets (ANTHROPIC_API_KEY / POE_API_KEY) come from HF
+# Space settings at runtime. Provider is auto-detected from the model prefix
+# (e.g. `anthropic/`, `poe/`).
 # STAT_DEMO_DISABLED_SKILLS: skills whose deps weren't installed (torch-only methods
 # on the CPU-only HF Spaces tier). The agent won't propose these.
 ENV STAT_DEMO_MODE=1 \
     STAT_DEMO_DATA_DIR=/home/user/app/data \
     STAT_DEMO_HF_DATASET=CyhVVVV/stat-agent-demo-data \
     STAT_DEMO_DISABLED_SKILLS=celltype-annotation-scanvi,spatial-domain-spagcn \
-    SPATIAL_AGENT_MODEL=poe/Claude-Sonnet-4.6 \
+    SPATIAL_AGENT_MODEL=anthropic/claude-opus-4-7 \
     HF_HOME=/tmp/huggingface \
     PORT=7860
 
