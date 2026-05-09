@@ -62,7 +62,7 @@ ENV STAT_DEMO_MODE=1 \
     STAT_DEMO_DATA_DIR=/home/user/app/data \
     STAT_DEMO_HF_DATASET=CyhVVVV/stat-agent-demo-data \
     STAT_DEMO_DISABLED_SKILLS=celltype-annotation-scanvi,spatial-domain-spagcn \
-    SPATIAL_AGENT_MODEL=anthropic/claude-opus-4-7 \
+    SPATIAL_AGENT_MODEL=poe/Claude-Sonnet-4.6 \
     HF_HOME=/tmp/huggingface \
     PORT=7860
 
