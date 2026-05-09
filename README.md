@@ -98,7 +98,7 @@ dataset/
 └── protein_CD3.tif
 ``` 
 
-**Coordinate convention.** Cell coordinates `(x, y)` in `adata.obs` map directly to image pixel `(x, y)`. No coordinate transformation, no `spatialdata` dependency. Note the array indexing swap: image array `img[y, x]` corresponds to cell `(x, y)`.
+**Coordinate convention.** Cell coordinates `(x, y)` in `adata.obs` map directly to image pixel `(x, y)`. No coordinate transformation. Note the array indexing swap: image array `img[y, x]` corresponds to cell `(x, y)`.
 
 **Required AnnData fields:** `adata.obs['x']`, `adata.obs['y']`, and the expression matrix `adata.X`. `adata.obs['celltype']` is *optional* — annotation skills will populate it.
 
@@ -205,18 +205,7 @@ For programmatic use, export the corresponding environment variable before launc
 
 ## Reproducing the paper
 
-The analyses, figures, and benchmarks from the STAT paper live in a separate repository:
-
-<!-- TODO: replace with the public PaperRepro URL once it is pushed -->
-
-> **PaperRepro** — `https://github.com/<org>/STAT-PaperRepro`
-
-It includes:
-
-- _Breast cancer case study_ — <!-- TODO: 1-line summary -->
-- _Colorectal cancer case study_ — <!-- TODO: 1-line summary -->
-- _Benchmarking_ — <!-- TODO: 1-line summary -->
-- _Ablation study_ — <!-- TODO: 1-line summary -->
+The analyses, figures, and benchmarks from the STAT paper live in a separate repository: `https://github.com/chenyhvvvv/STAT-PaperRepro`
 
 
 ## License
