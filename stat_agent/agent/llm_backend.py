@@ -1042,6 +1042,14 @@ class LLMBackend:
         return stdout_output
 
     # ------------------------------- Anthropic SDK -------------------------------
+    def _anthropic_supports_temperature(self) -> bool:
+        """Some Anthropic models (Opus 4.7+) deprecated `temperature`."""
+        m = self.config.model.lower()
+        # Opus 4.7 deprecated temperature; future generations likely will too.
+        if "opus-4-7" in m or "opus-4.7" in m:
+            return False
+        return True
+
     def _chat_via_anthropic(self, user_prompt: str) -> str:
         api_key = self._resolve_api_key()
         if not api_key:
@@ -1053,15 +1061,15 @@ class LLMBackend:
 
             # Wrap Anthropic SDK call with retry logic
             def _make_anthropic_call():
-                resp = client.messages.create(
+                kwargs = dict(
                     model=self.config.model,
                     max_tokens=self.config.max_tokens,
                     system=self.config.system_prompt,
-                    messages=[
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=self.config.temperature,
+                    messages=[{"role": "user", "content": user_prompt}],
                 )
+                if self._anthropic_supports_temperature():
+                    kwargs["temperature"] = self.config.temperature
+                resp = client.messages.create(**kwargs)
 
                 # Capture usage information from Anthropic
                 if hasattr(resp, 'usage') and resp.usage is not None:
@@ -1529,15 +1537,15 @@ class LLMBackend:
             # Generator function for streaming with retry on session creation
             def _stream_sdk():
                 def _create_stream():
-                    return client.messages.stream(
+                    kwargs = dict(
                         model=self.config.model,
                         max_tokens=self.config.max_tokens,
                         system=self.config.system_prompt,
-                        messages=[
-                            {"role": "user", "content": user_prompt}
-                        ],
-                        temperature=self.config.temperature,
+                        messages=[{"role": "user", "content": user_prompt}],
                     )
+                    if self._anthropic_supports_temperature():
+                        kwargs["temperature"] = self.config.temperature
+                    return client.messages.stream(**kwargs)
 
                 # Retry stream creation on transient failures
                 stream_context = _retry_with_backoff(
