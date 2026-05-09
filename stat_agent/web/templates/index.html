@@ -45,13 +45,13 @@
               <span class="form-hint" id="model-hint">e.g. gpt-5.4, gpt-5.5</span>
             </div>
             <div class="form-group">
-              <label for="api-key">API Key <span class="form-hint-inline" id="api-key-env"></span></label>
+              <label for="api-key">API Key</label>
               <input type="password" id="api-key" name="api_key" placeholder="sk-...">
             </div>
-            <div class="form-group">
-              <label for="base-url">Base URL <span class="optional">(auto-filled)</span></label>
-              <input type="text" id="base-url" name="base_url" placeholder="https://api.openai.com/v1">
-              <span class="form-hint" id="base-url-hint">Auto-detected from provider. Override only if using a proxy or custom endpoint.</span>
+            <div class="form-group hidden" id="base-url-group">
+              <label for="base-url">Base URL</label>
+              <input type="text" id="base-url" name="base_url" placeholder="https://api.example.com/v1">
+              <span class="form-hint">Required only when Provider is set to <em>Custom / Other</em>.</span>
             </div>
             <div class="form-row">
               <button type="button" id="test-llm-btn" class="btn-secondary">Test Connection</button>

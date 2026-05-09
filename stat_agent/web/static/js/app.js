@@ -46,12 +46,12 @@
   // Less common providers (Moonshot, xAI/Grok, Zhipu, Qwen) are intentionally
   // omitted — they are reachable through Poe.
   const PROVIDER_CONFIG = {
-    openai:    { models: 'gpt-5.4, gpt-5.5, gpt-4o',                       placeholder: 'gpt-5.4',                  envKey: 'OPENAI_API_KEY',    baseUrl: 'https://api.openai.com/v1' },
-    anthropic: { models: 'claude-opus-4-7, claude-opus-4-6',               placeholder: 'claude-opus-4-7',          envKey: 'ANTHROPIC_API_KEY', baseUrl: '' },
-    google:    { models: 'gemini-3.1-pro-preview, gemini-2.5-pro',         placeholder: 'gemini-3.1-pro-preview',   envKey: 'GOOGLE_API_KEY',    baseUrl: '' },
-    deepseek:  { models: 'deepseek-v4-pro, deepseek-v4-flash',             placeholder: 'deepseek-v4-pro',          envKey: 'DEEPSEEK_API_KEY',  baseUrl: 'https://api.deepseek.com/v1' },
-    poe:       { models: 'claude-sonnet-4.5, claude-opus-4.7, gpt-5.5, gemini-3.1-pro, deepseek-v4-pro-el', placeholder: 'claude-sonnet-4.5', envKey: 'POE_API_KEY', baseUrl: 'https://api.poe.com/v1' },
-    custom:    { models: 'Enter any model ID',                             placeholder: '',                         envKey: '',                  baseUrl: '' },
+    openai:    { models: 'gpt-5.4, gpt-5.5, gpt-4o',                                                        placeholder: 'gpt-5.4' },
+    anthropic: { models: 'claude-opus-4-7, claude-opus-4-6',                                                placeholder: 'claude-opus-4-7' },
+    google:    { models: 'gemini-3.1-pro-preview, gemini-2.5-pro',                                          placeholder: 'gemini-3.1-pro-preview' },
+    deepseek:  { models: 'deepseek-v4-pro, deepseek-v4-flash',                                              placeholder: 'deepseek-v4-pro' },
+    poe:       { models: 'claude-sonnet-4.5, claude-opus-4.7, gpt-5.5, gemini-3.1-pro, deepseek-v4-pro-el', placeholder: 'claude-sonnet-4.5' },
+    custom:    { models: 'Enter any model ID',                                                              placeholder: '' },
   };
 
   function onProviderChange() {
@@ -59,24 +59,20 @@
     const cfg = PROVIDER_CONFIG[provider] || PROVIDER_CONFIG.custom;
     const modelInput = document.getElementById('model');
     const baseUrlInput = document.getElementById('base-url');
+    const baseUrlGroup = document.getElementById('base-url-group');
     const modelHint = document.getElementById('model-hint');
-    const apiKeyEnv = document.getElementById('api-key-env');
-    const baseUrlHint = document.getElementById('base-url-hint');
 
     modelInput.placeholder = cfg.placeholder || 'model-name';
     modelHint.textContent = 'e.g. ' + cfg.models;
-    apiKeyEnv.textContent = cfg.envKey ? '(' + cfg.envKey + ')' : '';
 
-    // Auto-fill base URL only if user hasn't manually typed something different
-    if (cfg.baseUrl) {
-      const current = baseUrlInput.value.trim();
-      const isAutoFilled = !current || Object.values(PROVIDER_CONFIG).some(c => c.baseUrl && c.baseUrl === current);
-      if (isAutoFilled) baseUrlInput.value = cfg.baseUrl;
-      baseUrlHint.textContent = 'Auto-filled. Override only for proxy or custom endpoint.';
+    // Base URL is only meaningful for the Custom provider (built-in providers
+    // route to the right endpoint internally). Hide the field otherwise and
+    // clear any stale value so it isn't sent to the backend.
+    if (provider === 'custom') {
+      baseUrlGroup.classList.remove('hidden');
     } else {
-      baseUrlHint.textContent = provider === 'custom'
-        ? 'Required for custom providers.'
-        : 'Auto-detected. Leave empty unless using a custom endpoint.';
+      baseUrlGroup.classList.add('hidden');
+      baseUrlInput.value = '';
     }
   }
 
@@ -2979,13 +2975,14 @@
       loadingEl.classList.remove('hidden');
       submitBtn.disabled = true;
 
+      const providerVal = form.provider.value || undefined;
       const params = {
         dataset_dir: form.dataset_dir.value,
         session_name: form.session_name.value,
-        provider: form.provider.value || undefined,
+        provider: providerVal,
         api_key: form.api_key.value || undefined,
         model: form.model.value || undefined,
-        base_url: form.base_url.value || undefined,
+        base_url: providerVal === 'custom' ? (form.base_url.value || undefined) : undefined,
       };
 
       try {
@@ -3059,15 +3056,14 @@
       resultEl.textContent = 'Testing...';
       resultEl.style.color = 'var(--text-secondary)';
       try {
+        const provider = document.getElementById('provider').value;
         const modelVal = document.getElementById('model').value;
-        // Auto-detect provider from model prefix (e.g. "poe/Model" -> "poe")
-        const provMatch = modelVal.match(/^(\w+)\//);
-        const provider = provMatch ? provMatch[1] : 'openai';
+        const baseUrl = document.getElementById('base-url').value;
         const res = await api.testLLM({
           provider: provider,
           api_key: document.getElementById('api-key').value,
           model: modelVal,
-          base_url: document.getElementById('base-url').value,
+          base_url: provider === 'custom' ? baseUrl : '',
         });
         if (res.success) {
           resultEl.textContent = 'Connected!';
