@@ -43,6 +43,8 @@ for sid in slice_ids:
     s = session.get_slice(sid)
     ad = s.adata.copy()
     ad.obs['batch'] = f'slice_{sid}'
+    # Slice-id marker for safe positional merge-back (avoids obs_names collisions)
+    ad.obs['_slice_id'] = sid
     adatas.append(ad)
     print(f"  Slice {sid}: {ad.n_obs} cells, {ad.n_vars} genes")
 
@@ -96,21 +98,19 @@ print("\n" + "=" * 60)
 print("STAGE 4: Store Results Back to Slices")
 print("=" * 60)
 
-# Store integrated results back to each slice
+# Store integrated results back to each slice — use the _slice_id marker
+# we set in Stage 1, NOT obs_names (which can collide across slices and
+# silently corrupt the assignment).
 for sid in slice_ids:
     s = session.get_slice(sid)
-    batch_mask = adata.obs['batch'] == f'slice_{sid}'
-    batch_cells = adata.obs_names[batch_mask]
-
-    # Map back using common obs_names
-    common_cells = s.adata.obs_names.isin(batch_cells)
-    if common_cells.any():
-        batch_adata = adata[batch_mask]
-        s.adata.obs['leiden_integrated'] = pd.Series(
-            batch_adata.obs['leiden'].values,
-            index=batch_adata.obs_names
-        ).reindex(s.adata.obs_names)
-        print(f"  Slice {sid}: stored integrated leiden clusters")
+    slice_mask = (adata.obs['_slice_id'] == sid).values
+    n_in_slice = int(slice_mask.sum())
+    if n_in_slice == s.adata.n_obs:
+        # Positional copy in original order
+        s.adata.obs['leiden_integrated'] = adata.obs.loc[slice_mask, 'leiden'].values
+        print(f"  Slice {sid}: stored integrated leiden clusters ({n_in_slice} cells)")
+    else:
+        print(f"  Slice {sid}: WARNING combined has {n_in_slice} cells but slice has {s.adata.n_obs}; skipping")
 
 # Also store full integrated adata in uns of first slice for reference
 session.get_slice(slice_ids[0]).adata.uns['integration_bbknn'] = {

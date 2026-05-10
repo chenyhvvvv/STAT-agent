@@ -12,6 +12,7 @@ filter_requirements:
 prerequisites:
   - "Cell type annotations in target slice (adata.obs['celltype'])"
   - "Human gene expression data with HGNC gene symbols (CellPhoneDB is human-only), need to confirm currently if it is human data."
+  - "Full transcriptome (≳10k genes). On gene-panel data (e.g. CosMx/Xenium with a few hundred genes) most curated LR pairs are not in the panel and CellPhoneDB will silently return near-empty results — prefer LIANA in that case."
 default_skill: false
 ---
 
@@ -19,7 +20,9 @@ default_skill: false
 
 Identify significant ligand-receptor interactions between cell types using **CellPhoneDB** (v5). CellPhoneDB uses a curated database of human ligand-receptor interactions and statistical permutation testing to determine which interactions are significantly enriched between cell type pairs.
 
-**Important**: CellPhoneDB only supports **human** data. For mouse data, use LIANA+ with `mouseconsensus` resource instead.
+**Important**:
+- CellPhoneDB only supports **human** data. For mouse data, use LIANA+ with `mouseconsensus` resource instead.
+- CellPhoneDB needs **full transcriptome** to be useful. Most of its curated LR pairs sit outside any small gene panel; on a few-hundred-gene dataset the result table will be nearly empty. Use **LIANA** (`cell-communication-LIANA`) for panel data — it produces meaningful interactions even on ~300 genes.
 
 **Output**:
 - `adata.uns['cellphonedb_means']`: Mean expression of LR pairs per cell type pair

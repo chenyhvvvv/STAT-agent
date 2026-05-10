@@ -68,14 +68,20 @@ print("\n" + "=" * 60)
 print("STAGE 2: Run Scanorama Integration")
 print("=" * 60)
 
+import numpy as np
 import scanorama
 
-# Integrate
+# Integrate. NOTE: correct_scanpy returns NEW adata objects with
+# obsm['X_scanorama']; the input list is NOT modified in place
+# (despite the docstring suggesting otherwise).
 corrected = scanorama.correct_scanpy(adatas_pp, return_dimred=True)
 
-# Concatenate corrected
-adata = sc.concat(adatas_pp, join='inner', label='batch',
+# Concatenate the *corrected* adatas. sc.concat drops obsm by default,
+# so we re-attach X_scanorama explicitly afterwards.
+X_scanorama = np.concatenate([a.obsm['X_scanorama'] for a in corrected], axis=0)
+adata = sc.concat(corrected, join='inner', label='batch',
                   keys=[f'slice_{sid}' for sid in slice_ids])
+adata.obsm['X_scanorama'] = X_scanorama
 adata.obs_names_make_unique()
 
 print(f"  Scanorama integration complete")

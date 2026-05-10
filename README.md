@@ -37,12 +37,18 @@ With the full set of analysis skill dependencies (squidpy, scvi-tools, torch, li
 pip install "stat-agent[skills]"
 ```
 
-Some skills require packages that aren't on PyPI or have conflict with other pacakges; install separately as needed:
+Some skills require packages that aren't on PyPI; install separately as needed:
 
 ```bash
-# STAGATE (requires PyG + matching torch_geometric/torch_sparse/torch_scatter wheels)
+# STAGATE (requires PyG ecosystem wheels matching your torch + CUDA version)
+pip install torch_geometric
+pip install torch_sparse torch_scatter -f https://data.pyg.org/whl/torch-${TORCH_VER}+${CUDA_VER}.html
 pip install git+https://github.com/QIFEIDKN/STAGATE_pyG.git
 ```
+
+(Replace `${TORCH_VER}` and `${CUDA_VER}` with your installed torch/CUDA — e.g. `2.4.1+cu121`.)
+
+> **GPU note:** the `torch` and CUDA versions should be adjusted to match your hardware. See [pytorch.org](https://pytorch.org/get-started/locally/).
 
 ## Quick start
 
@@ -172,11 +178,10 @@ Skills are auto-discovered from `stat_agent/skills/{slug}/SKILL.md`. Each skill 
 | [Spatial Alignment (STalign)](stat_agent/skills/alignment-STalign/SKILL.md) | Align two cell-level spatial transcriptomics slices using STalign. |
 | [Slice Registration (PASTE)](stat_agent/skills/registration-paste/SKILL.md) | Align multiple spatial transcriptomics slices using PASTE (Probabilistic Alignment of ST Experiments). |
 
-### CNV inference & trajectory
+### Trajectory inference
 
 | Skill | Summary |
 | --- | --- |
-| [Expression-based CNV Inference (infercnvpy)](stat_agent/skills/cnv-infercnvpy/SKILL.md) | Infer copy number variations (CNVs) from gene expression data using infercnvpy. |
 | [Pseudotime Trajectory Analysis (Palantir / DPT)](stat_agent/skills/trajectory-palantir-dpt/SKILL.md) | Infer cell developmental trajectories and pseudotime ordering using expression-based methods. |
 
 <!-- SKILLS-TABLE-END -->

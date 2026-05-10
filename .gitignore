@@ -68,3 +68,6 @@ CLAUDE.md
 
 # Claude Code local state
 .claude/
+
+# Local skill test scaffold (not part of the package)
+tests/skills/

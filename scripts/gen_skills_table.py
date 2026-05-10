@@ -62,8 +62,7 @@ CATEGORIES: list[tuple[str, list[str]]] = [
         "alignment-STalign",
         "registration-paste",
     ]),
-    ("CNV inference & trajectory", [
-        "cnv-infercnvpy",
+    ("Trajectory inference", [
         "trajectory-palantir-dpt",
     ]),
 ]

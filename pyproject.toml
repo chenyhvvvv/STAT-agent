@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stat-agent"
-version = "0.1.24"
+version = "0.1.25"
 description = "STAT: Spatial Transcriptomics Analytical agenT - AI-powered platform for spatial omics analysis"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -89,16 +89,13 @@ skills = [
     "tangram-sc>=1.0.0",
 
     # Deconvolution (RCTD, FlashDeconv, Cell2location)
-    "qpsolvers>=4.0",
+    "qpsolvers[osqp]>=4.0",   # bundled RCTD needs the osqp QP backend specifically
     "ray>=2.0",
     "flashdeconv>=0.1.0",
     "cell2location>=0.1.4",
 
     # Trajectory / pseudotime (Palantir)
     "palantir>=1.0.0",
-
-    # CNV inference
-    "infercnvpy>=0.4.0",
 
     # Spatially variable genes
     "NaiveDE>=0.1",
@@ -117,7 +114,11 @@ skills = [
 
     # Slice registration (PASTE)
     "paste-bio>=1.0.0",
-    "POT>=0.9.0,<0.9.6",       # 0.9.6 breaks PASTE line_search API
+    "POT>=0.9.0,<0.9.5",       # 0.9.5+ adds 6th arg to cg's line_search call,
+                                # which breaks PASTE's 5-arg local line_search
+
+    # Slice alignment (bundled STalign needs plotly for interactive annotators)
+    "plotly>=5",
 
     "pynrrd>=1.0",
 ]
