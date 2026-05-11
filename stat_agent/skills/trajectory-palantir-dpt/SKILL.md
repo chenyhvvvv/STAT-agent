@@ -10,8 +10,8 @@ filter_requirements:
   data_levels: [cell]
 
 prerequisites:
+  - "Root cell type or root cell hint — REQUIRED. Specify the least differentiated population (e.g., stem cells, progenitors, basal cells). Without a biologically motivated root, pseudotime is meaningless: the auto-fallback (extreme of DC1) gives a numerically valid but biologically arbitrary ordering."
   - Cell type annotations (recommended for interpreting trajectory)
-  - "Root cell type or root cell hint (e.g., 'stem cells', 'progenitors')"
 
 default_skill: false
 ---

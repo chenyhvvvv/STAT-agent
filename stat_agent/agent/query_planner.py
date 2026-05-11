@@ -238,8 +238,11 @@ Determine which slice(s) the user wants to analyze and how to execute the query.
 - ROI references (e.g., "in tumor_region")
 - Keywords like "both", "all", "each" (may need separate steps)
 - Keywords like "compare", "between" (single cross-slice step)
+- Multiple analytical actions in one query — chained with "then", "after that", "and then", "first ... then ...", a numbered list, or distinct verbs (e.g., "annotate celltype and find SVGs"). Split into separate steps even on a single slice; one step per analytical action. (Note: if the actions are clearly meant to be done together / small workload, can keep in one step")
 - If only 1 slice exists, assume that slice
 - If ambiguous with multiple slices, ASK FOR CLARIFICATION
+
+NOTE: If the analysis or process is asked for multiple slices, and can be performed in the same way on each slice (like using one or two replicate function), then it is better to keep it as one step.
 
 **Decide:**
 1. Do you have enough information to determine target slice(s)?
@@ -291,6 +294,11 @@ Example 6 (Only one slice - no ambiguity):
 User: "Annotate celltype"
 Session: 1 slice only
 → {{"needs_clarification": false, "steps": [{{"step_number": 1, "description": "Annotate cell types on slice 0", "target_slice_ids": [0], "refined_query": "Annotate celltype on slice 0"}}]}}
+
+Example 7 (Single slice - multiple analytical actions, separate steps):
+User: "Annotate celltype and then find spatially variable genes"
+Session: 1 slice only
+→ {{"needs_clarification": false, "steps": [{{"step_number": 1, "description": "Annotate cell types on slice 0", "target_slice_ids": [0], "refined_query": "Annotate celltype on slice 0"}}, {{"step_number": 2, "description": "Find spatially variable genes on slice 0", "target_slice_ids": [0], "refined_query": "Find spatially variable genes on slice 0"}}]}}
 
 Now analyze the user's query and output your decision in JSON format:"""
 

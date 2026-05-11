@@ -56,6 +56,16 @@ OPENAI_COMPAT_BASE_URLS = {
 }
 
 
+# Anthropic models with mandatory adaptive thinking — they reject the
+# `temperature` parameter outright (the API forces temperature=1).
+_ANTHROPIC_NO_TEMPERATURE = {"claude-opus-4-7"}
+
+
+def _anthropic_supports_temperature(model: str) -> bool:
+    base = model.split("/", 1)[-1]
+    return base not in _ANTHROPIC_NO_TEMPERATURE
+
+
 @dataclass
 class BackendConfig:
     model: str
@@ -297,6 +307,7 @@ class LLMBackend:
         model: str,
         api_key: Optional[str] = None,
         endpoint: Optional[str] = None,
+        provider: Optional[str] = None,
         max_tokens: int = 8192,
         temperature: float = 0.2,
         max_retry_attempts: int = 3,
@@ -304,13 +315,37 @@ class LLMBackend:
         retry_backoff_factor: float = 2.0,
         retry_jitter: float = 0.5
     ) -> None:
-        provider = ModelConfig.get_provider_from_model(model)
-        # Strip provider prefix from model name for API calls
-        # (e.g., "poe/Claude-Opus-4.5" → "Claude-Opus-4.5")
+        # Explicit provider (from the UI dropdown) takes precedence over
+        # name-based auto-detection so users can type bare model IDs like
+        # "claude-opus-4-7" without an "anthropic/" prefix.
+        if provider:
+            provider = provider.lower()
+            # "custom" is OpenAI-compatible with a user-supplied base URL.
+            if provider == "custom":
+                provider = "openai"
+        else:
+            provider = ModelConfig.get_provider_from_model(model)
+
+        # Strip provider prefix from model name for API calls. Both the
+        # canonical prefix (e.g. "anthropic/") and a few common aliases
+        # ("gemini/" for google, "openai/") are accepted for backward
+        # compat with previously-saved configs.
         api_model = model
-        provider_prefix = f"{provider}/"
-        if api_model.startswith(provider_prefix):
-            api_model = api_model[len(provider_prefix):]
+        prefix_aliases = {
+            "openai": ("openai/",),
+            "anthropic": ("anthropic/",),
+            "google": ("google/", "gemini/"),
+            "deepseek": ("deepseek/",),
+            "poe": ("poe/",),
+            "xai": ("xai/", "grok/"),
+            "moonshot": ("moonshot/",),
+            "zhipu": ("zhipu/",),
+            "dashscope": ("dashscope/", "qwen/"),
+        }
+        for prefix in prefix_aliases.get(provider, (f"{provider}/",)):
+            if api_model.startswith(prefix):
+                api_model = api_model[len(prefix):]
+                break
         self.config = BackendConfig(
             model=api_model,
             api_key=api_key,
@@ -1042,14 +1077,6 @@ class LLMBackend:
         return stdout_output
 
     # ------------------------------- Anthropic SDK -------------------------------
-    def _anthropic_supports_temperature(self) -> bool:
-        """Some Anthropic models (Opus 4.7+) deprecated `temperature`."""
-        m = self.config.model.lower()
-        # Opus 4.7 deprecated temperature; future generations likely will too.
-        if "opus-4-7" in m or "opus-4.7" in m:
-            return False
-        return True
-
     def _chat_via_anthropic(self, user_prompt: str) -> str:
         api_key = self._resolve_api_key()
         if not api_key:
@@ -1065,9 +1092,11 @@ class LLMBackend:
                     model=self.config.model,
                     max_tokens=self.config.max_tokens,
                     system=self.config.system_prompt,
-                    messages=[{"role": "user", "content": user_prompt}],
+                    messages=[
+                        {"role": "user", "content": user_prompt}
+                    ],
                 )
-                if self._anthropic_supports_temperature():
+                if _anthropic_supports_temperature(self.config.model):
                     kwargs["temperature"] = self.config.temperature
                 resp = client.messages.create(**kwargs)
 
@@ -1541,9 +1570,11 @@ class LLMBackend:
                         model=self.config.model,
                         max_tokens=self.config.max_tokens,
                         system=self.config.system_prompt,
-                        messages=[{"role": "user", "content": user_prompt}],
+                        messages=[
+                            {"role": "user", "content": user_prompt}
+                        ],
                     )
-                    if self._anthropic_supports_temperature():
+                    if _anthropic_supports_temperature(self.config.model):
                         kwargs["temperature"] = self.config.temperature
                     return client.messages.stream(**kwargs)
 

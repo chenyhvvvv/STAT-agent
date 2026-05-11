@@ -112,6 +112,22 @@ print("\n" + "=" * 60)
 print("STAGE 3: Run LDDMM")
 print("=" * 60)
 
+# Pick a working device: CUDA if both available AND kernels can launch
+# (torch.cuda.is_available() returns True on V100/T4/P100 with cu13 wheels
+# even when CC 7.0 kernels aren't compiled in — actually probe).
+def _cuda_kernels_work():
+    if not torch.cuda.is_available():
+        return False
+    try:
+        _ = (torch.zeros(2, device='cuda') + 1).sum().item()
+        torch.cuda.synchronize()
+        return True
+    except Exception:
+        return False
+
+device = 'cuda' if _cuda_kernels_work() else 'cpu'
+print(f"  STalign LDDMM device: {device}")
+
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     result = ST.LDDMM(
@@ -120,7 +136,7 @@ with warnings.catch_warnings():
         pointsI=pointsI, pointsJ=pointsJ,
         niter=300, epV=100,
         sigmaM=1.5, sigmaB=1.0, sigmaA=1.1,
-        device='cpu', dtype=torch.float64,
+        device=device, dtype=torch.float64,
     )
 plt.close('all')
 
@@ -214,6 +230,6 @@ plt.show()
 - **Pairwise only**: Aligns exactly 2 slices (source → target).
 - **Cell-level only**: Not for spot-level (Visium) data.
 - **Landmarks required**: At least 3 matching (x, y) point pairs between source and target.
-- **CPU only**: GPU has known issues; always uses `device='cpu'`.
+- **CUDA support**: uses CUDA when available + kernels load successfully (probed at runtime). Falls back to CPU otherwise. On V100/T4/P100 with default cu13 wheels, kernels fail to launch — see README's GPU note for installing a compatible torch build.
 - **New slice created**: Originals preserved in `obs['x_original']`, `obs['y_original']`.
 - **Requires**: `STalign`, `torch`.

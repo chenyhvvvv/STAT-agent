@@ -44,13 +44,12 @@ RUN pip install --user \
     'ray>=2.0' \
     'flashdeconv>=0.1.0' \
     'palantir>=1.0.0' \
-    'infercnvpy>=0.4.0' \
     'NaiveDE>=0.1' \
     'SpatialDE>=1.1' \
     'scikit-misc>=0.5' \
     'igraph>=0.9,<1.0' \
     'paste-bio>=1.0.0' \
-    'POT>=0.9.0,<0.9.6' \
+    'POT>=0.9.0,<0.9.5' \
     'pynrrd>=1.0'
 
 # Demo configuration — secrets (ANTHROPIC_API_KEY / POE_API_KEY) come from HF

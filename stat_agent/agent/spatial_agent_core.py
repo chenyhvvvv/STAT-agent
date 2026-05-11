@@ -379,7 +379,7 @@ class SpatialAgent:
         skill_dir: Optional[Path] = None,
         enable_planning: bool = True,
         enable_skills: bool = True,
-        max_context_messages: int = 20,
+        max_context_messages: int = 200,
         safe_mode: bool = True,
         enable_prompt_logging: bool = True,
         prompt_log_dir: str = "logs",
@@ -394,8 +394,8 @@ class SpatialAgent:
             **llm_kwargs
         )
         self.memory = ConversationMemory(
-            max_full_messages=8,  # Show last 8 messages (4 turns) in full
-            message_summary_threshold=200,  # Summarize if message > 200 chars
+            max_full_messages=80,  # Show last 80 messages (~40 turns) in full — sized for 200K-context backbones
+            message_summary_threshold=200,  # Summarize individual message bodies > 200 chars
             max_context_messages=max_context_messages,  # For conversation summarization trigger
             llm_backend=self.llm  # Pass LLM for summarization
         )

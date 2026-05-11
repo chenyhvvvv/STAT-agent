@@ -279,9 +279,11 @@ Analyze whether all prerequisites are met based on:
 3. What's missing and how to obtain it
 
 **Decision Criteria:**
-- If prerequisite is already in session (e.g., celltype column exists), or can be obtained from the session (e.g. tissue name) → MET
-- If prerequisite needs simple user input (e.g., file path) → ASK USER
-- If prerequisite needs prior analysis (e.g., missing celltype column, needs annotation first) → ADVISE USER
+- Check ONLY the listed Skill Prerequisites above against the current session state and previously collected info. Do NOT invent additional prerequisites.
+- If every listed prerequisite is already in session (e.g., celltype column exists), or can be obtained from the session (e.g. tissue name), or has been provided in the previously collected info → MET. Mark MET even if the user query also describes in-line data preparation (subsetting, filtering, relabeling, pooling, building a TME object, dropping cells, renaming categories) — the executor will do that preparation in code at runtime; it is NOT a missing prerequisite.
+- If a listed prerequisite needs simple user input (e.g., file path, species) and has not been collected → ASK USER
+- If a listed prerequisite cannot be derived in code from current state and genuinely requires a separate prior analytical step (e.g., the slice has no celltype column at all and the skill needs one, while query not mentioned; deconvolution weights don't exist and the skill needs them) → DECLINE USER with advice on what to do when NECESSARY!
+- If can pass or can be obtained by chat, do not provide advice. Do not easily to decline the query. Only provide advice if prerequisites can't be met by chat and current conditions and user needs guidance on what to do next.
 
 **Output Format (JSON):**
 ```json

@@ -246,9 +246,9 @@ class ConversationMemory:
 
     def __init__(
         self,
-        max_full_messages: int = 8,  # Show last 8 messages (4 turns) in full
-        message_summary_threshold: int = 200,  # Summarize if message > 200 chars
-        max_context_messages: int = 20,  # Trigger conversation summary after 20 messages
+        max_full_messages: int = 80,  # Show last 80 messages (~40 turns) in full — sized for 200K-context backbones
+        message_summary_threshold: int = 200,  # Summarize individual message bodies > 200 chars
+        max_context_messages: int = 200,  # Trigger conversation summary after 200 messages
         storage_dir: Optional[Path] = None,
         session_id: Optional[str] = None,
         llm_backend: Optional['LLMBackend'] = None  # Will be set by agent
@@ -581,7 +581,7 @@ class ConversationMemory:
 
         if assistant_summaries:
             summary_parts.append("\n**Actions Performed:**")
-            for i, summary in enumerate(assistant_summaries[:5], 1):
+            for i, summary in enumerate(assistant_summaries[:50], 1):
                 summary_parts.append(f"{i}. {summary}")
 
         if key_actions:

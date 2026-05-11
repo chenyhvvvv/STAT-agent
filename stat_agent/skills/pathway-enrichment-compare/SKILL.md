@@ -8,7 +8,7 @@ filter_requirements:
   modalities: [gene]
 
 prerequisites:
-  - "Two gene lists stored as a dict in adata.uns['enrichment_genes_groups'], e.g. {group_a: [...], group_b: [...]}"
+  - "Two gene lists stored as a dict in adata.uns['enrichment_genes_groups'], e.g. {group_a: [...], group_b: [...]}, or similar way to define the two gene groups to compare."
   - Species (human or mouse)
 ---
 
@@ -59,7 +59,7 @@ for g, genes in groups.items():
 species = 'human'  # <-- SET SPECIES: 'human' or 'mouse'
 ```
 
-### Stage 2: Load Gene-Set Library
+### Stage 2: Choose Gene-Set Library
 
 ```python
 # Common choices:
@@ -69,68 +69,34 @@ species = 'human'  # <-- SET SPECIES: 'human' or 'mouse'
 #   'KEGG_2021_Human'
 #   'WikiPathways_2023_Human'
 library = 'MSigDB_Hallmark_2020'  # <-- SET LIBRARY
-
-organism = 'Human' if species == 'human' else 'Mouse'
-gene_sets = gp.get_library(library, organism=organism)
-
-min_size, max_size = 10, 500
-gene_sets_filtered = {
-    name: genes for name, genes in gene_sets.items()
-    if min_size <= len(genes) <= max_size
-}
-print(f"{library}: {len(gene_sets_filtered)} gene sets after size filter")
 ```
 
 ### Stage 3: Run Enrichment per Group
 
 ```python
-library_genes = set()
-for gs in gene_sets_filtered.values():
-    library_genes.update(gs)
-
+# gp.enrichr (online Enrichr API) does set-size filtering and stats server-side
+# — no need to download the library locally (which can hit a bytes/str decode
+# bug in some gseapy versions). organism must be lowercase: 'human' or 'mouse'.
 results_by_group = {}
 for group_name, gene_list in groups.items():
-    overlap = set(gene_list) & library_genes
-
-    # Auto-convert casing if mismatch is severe (e.g. mouse Title -> human UPPER)
-    if len(overlap) < len(gene_list) * 0.3:
-        upper = [g.upper() for g in gene_list]
-        if len(set(upper) & library_genes) > len(overlap):
-            gene_list = upper
-            overlap = set(upper) & library_genes
-
-    if len(overlap) < 2:
-        print(f"[{group_name}] only {len(overlap)} genes map to library — skipping")
+    if len(gene_list) < 5:
+        print(f"[{group_name}] only {len(gene_list)} genes — skipping")
         results_by_group[group_name] = pd.DataFrame()
         continue
 
-    # Use gp.enrichr (online Enrichr API, background = full genome)
-    # rather than gp.enrich (local, background = library gene union).
-    # The online API gives comparable p-values to R's enrichR package.
-    # Falls back to gp.enrich (local) if the API is unreachable.
-    try:
-        # gp.enrichr requires lowercase species ('human'/'mouse'),
-        # NOT the capitalized form used by gp.get_library ('Human'/'Mouse')
-        enr = gp.enrichr(
-            gene_list=gene_list,
-            gene_sets=library,
-            organism=species,     # lowercase: 'human' or 'mouse'
-            outdir=None, no_plot=True,
-        )
-    except Exception:
-        print(f"    Enrichr API unavailable, falling back to local test")
-        enr = gp.enrich(
-            gene_list=gene_list,
-            gene_sets=gene_sets_filtered,
-            outdir=None, no_plot=True, verbose=False,
-        )
+    enr = gp.enrichr(
+        gene_list=gene_list,
+        gene_sets=library,
+        organism=species,
+        outdir=None, no_plot=True,
+    )
     df = enr.results.copy()
     df['group'] = group_name
     df['hit'] = df['Overlap'].astype(str).str.split('/').str[0].astype(int)
     df['set_size'] = df['Overlap'].astype(str).str.split('/').str[1].astype(int)
     df['neg_log10_padj'] = -np.log10(df['Adjusted P-value'].clip(lower=1e-50))
     results_by_group[group_name] = df
-    print(f"[{group_name}] overlap={len(overlap)}/{len(gene_list)}  "
+    print(f"[{group_name}] {len(df)} terms  "
           f"raw P<1e-3: {int((df['P-value'] < 1e-3).sum())}  "
           f"FDR<0.05: {int((df['Adjusted P-value'] < 0.05).sum())}")
 ```
@@ -143,7 +109,6 @@ slice_obj.adata.uns['enrichment_params'] = {
     'group_names': group_names,
     'species': species,
     'library': library,
-    'min_size': min_size, 'max_size': max_size,
     'background_size': len(slice_obj.adata.var_names),
 }
 
@@ -250,8 +215,6 @@ else:
 |---|---|---|---|
 | `library` | `'MSigDB_Hallmark_2020'` | Any Enrichr library name | Gene-set library to test |
 | `species` | `'human'` | `'human'`, `'mouse'` | Must match gene-name casing |
-| `min_size` | `10` | 5–50 | Drop tiny gene sets |
-| `max_size` | `500` | 100–2000 | Drop huge gene sets |
 | `p_threshold` | `1e-3` | 1e-2 to 1e-4 | Raw P cutoff for plot |
 | `top_n` | `15` | 5–30 | Top terms per side |
 | `left_color` | `"#D35D05"` | Any hex | Left bars |
@@ -260,7 +223,7 @@ else:
 ## Notes
 
 - **Why raw P-value for the plot cutoff?** On small compact libraries like MSigDB Hallmark (50 pathways), BH-adjusted P is close to raw P and a raw cutoff is more intuitive. For larger libraries (GO has ~5000 terms), switch to `Adjusted P-value < 0.05`.
-- **Background**: `gp.enrichr` (default, online API) uses the full human genome (~20k genes) as the background — matching R's `enrichR` package. Falls back to `gp.enrich` (local, background = library gene union) if the API is unreachable. The local test is more conservative and produces fewer significant hits.
-- **Gene-name casing**: auto-detects uppercase/titlecase mismatches.
+- **Background**: `gp.enrichr` uses the full human/mouse genome (~20k genes) as the background — matches R's `enrichR` package.
+- **Gene-name casing**: pass mouse-style genes (`Cd8a`) with `species='mouse'`; pass human-style (`CD8A`) with `species='human'`. Crossing them gives empty hits.
 - **Input gene list size**: for meaningful enrichment, expect at least 50 genes per group. Fewer than 20 will typically return no significant hits on Hallmark. If your DE is returning very few markers, consider loosening the DE filter (e.g. `padj < 0.1`) before calling this skill.
 - **Requires gseapy**: `pip install gseapy`. First run downloads the library (cached afterwards).

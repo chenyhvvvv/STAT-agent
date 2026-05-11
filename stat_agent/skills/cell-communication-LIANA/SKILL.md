@@ -9,7 +9,7 @@ filter_requirements:
   data_levels: [cell/spot]
 
 prerequisites:
-  - "Cell type annotations in target slice (adata.obs['celltype'])"
+  - "Cell type annotations in target slice (adata.obs['celltype']), or similar categorical column defining cell types or clusters."
   - Species information (human or mouse) for selecting the correct ligand-receptor database
 default_skill: true
 ---
