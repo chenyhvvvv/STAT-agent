@@ -8,7 +8,7 @@ An AI-powered platform for spatial omics analysis with multi-format support,
 interactive visualization, and intelligent code generation.
 """
 
-__version__ = "0.1.26"
+__version__ = "0.1.27"
 
 # Apply compatibility patches before any third-party imports
 import stat_agent._compat  # noqa: F401

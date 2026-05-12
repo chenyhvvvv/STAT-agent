@@ -72,6 +72,19 @@ In the UI:
    - *"Run RCTD deconvolution and overlay the dominant cell type."*
 
 
+
+<details>
+<summary>📸 A chat turn demo in the interface</summary>
+
+<p align="center">
+  <a href="demo_chat_turn.jpg">
+    <img src="demo_chat_turn.jpg" alt="STAT one chat-turn demo" width="500" />
+  </a>
+</p>
+
+</details>
+
+
 ## Data format
 
 STAT auto-detects your data layout. Place files in a single directory.

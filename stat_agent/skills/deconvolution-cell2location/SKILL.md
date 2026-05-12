@@ -5,7 +5,6 @@ slug: deconvolution-cell2location
 description: Reference-based Bayesian deconvolution of spot-level spatial transcriptomics using Cell2location. Two-stage model that first learns cell type expression signatures from scRNA-seq reference, then maps them to spatial spots. Provides uncertainty estimates. GPU recommended.
 
 filter_requirements:
-  num_slices: 1
   modalities: [gene]
   data_levels: [spot]
 

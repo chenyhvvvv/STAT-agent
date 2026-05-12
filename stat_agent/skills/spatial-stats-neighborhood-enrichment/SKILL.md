@@ -5,7 +5,6 @@ slug: spatial-stats-neighborhood-enrichment
 description: Compute neighborhood enrichment z-scores to identify which cell types are spatially co-localized or depleted from each other's neighborhoods. Uses squidpy permutation testing on spatial neighbor graphs. Requires cell type annotations.
 
 filter_requirements:
-  num_slices: 1
   modalities: [gene/protein]
   data_levels: [cell/spot]
 

@@ -5,7 +5,6 @@ slug: spatial-statistics
 description: Compute spatial statistics including Moran's I (spatial autocorrelation of genes), Ripley's K (spatial point pattern of cell types), co-occurrence analysis, and centrality scores. Uses squidpy for permutation-based spatial statistical testing on neighbor graphs.
 
 filter_requirements:
-  num_slices: 1
   modalities: [gene/protein]
   data_levels: [cell/spot]
 

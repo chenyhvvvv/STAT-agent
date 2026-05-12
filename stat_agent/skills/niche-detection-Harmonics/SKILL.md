@@ -5,7 +5,6 @@ slug: niche-detection
 description: Identify spatial cellular niches using Harmonics hierarchical model. Detects microenvironments based on cell type composition and assigns niche labels to cells.
 
 filter_requirements:
-  num_slices: 1
   modalities: [gene]
   data_levels: [cell]
 

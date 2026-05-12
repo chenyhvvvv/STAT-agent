@@ -4,7 +4,6 @@ title: Cell-Cell Communication Analysis (LIANA+)
 slug: cell-communication-liana
 description: Analyze cell-cell communication using LIANA+ to identify significant ligand-receptor interactions between cell types. (Recommended!)
 filter_requirements:
-  num_slices: 1
   modalities: [gene]
   data_levels: [cell/spot]
 

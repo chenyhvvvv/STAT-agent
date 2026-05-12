@@ -5,7 +5,6 @@ slug: cell-communication-cellphonedb
 description: Analyze cell-cell communication using CellPhoneDB statistical method to identify significant ligand-receptor interactions between cell types via permutation testing.
 
 filter_requirements:
-  num_slices: 1
   modalities: [gene]
   data_levels: [cell/spot]
 
