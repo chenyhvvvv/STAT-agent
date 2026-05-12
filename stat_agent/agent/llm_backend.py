@@ -781,19 +781,27 @@ class LLMBackend:
                             logger.debug(f"✓ Extracted via output[0]['text'] (length: {len(text)} chars)")
                             return text
 
-                # Fallback: try text attribute directly
-                if hasattr(resp, 'text') and resp.text:
-                    logger.debug(f"✓ Extracted via text attribute (length: {len(resp.text)} chars)")
-                    return resp.text
+                # Fallback: try text attribute directly, but ONLY if it's a real
+                # string. Newer openai SDKs expose `resp.text` as a typed
+                # ResponseTextConfig (echo of request.text config), which has no
+                # __len__ and is not the response body.
+                text_attr = getattr(resp, 'text', None)
+                if isinstance(text_attr, str) and text_attr:
+                    logger.debug(f"✓ Extracted via text attribute (length: {len(text_attr)} chars)")
+                    return text_attr
 
-                # If nothing worked, provide diagnostic info
-                logger.error("❌ Could not extract text from GPT-5 response")
+                # If nothing worked, provide diagnostic info and signal that this
+                # is a transient empty-response case (GPT-5 reasoning sometimes
+                # exhausts max_output_tokens before emitting text). Including
+                # "try again" makes _should_retry classify this as retryable, so
+                # the retry loop will resend the request with a fresh trajectory.
+                logger.error("❌ Could not extract text from GPT-5 response (empty output, try again)")
                 logger.error(f"Response type: {type(resp).__name__}")
                 logger.error(f"Available attributes: {[attr for attr in dir(resp) if not attr.startswith('_')]}")
                 raise RuntimeError(
-                    f"Unexpected Responses API response format. "
-                    f"Type: {type(resp).__name__}, "
-                    f"Available attributes: {dir(resp)}"
+                    f"Responses API returned no text — try again. "
+                    f"Type: {type(resp).__name__}; "
+                    f"likely cause: reasoning consumed max_output_tokens before any text was emitted."
                 )
 
             return _retry_with_backoff(

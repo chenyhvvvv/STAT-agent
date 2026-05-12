@@ -4,7 +4,6 @@ title: Cell Type Annotation with scANVI
 slug: celltype-annotation-scanvi
 description: Annotate cell types in spatial transcriptomics data using scANVI transfer learning from a reference scRNA-seq dataset. (Recommended for cell data)
 filter_requirements:
-  num_slices: 1
   modalities: [gene]
   data_levels: [cell]
 

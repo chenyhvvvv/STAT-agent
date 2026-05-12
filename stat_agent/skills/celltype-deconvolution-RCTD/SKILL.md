@@ -5,7 +5,6 @@ slug: celltype-deconvolution
 description: Perform cell type deconvolution (or annotation on spot) on spatial transcriptomics data (Visium spots) using RCTD with a single-cell reference dataset. (Recommended for spot data)
 
 filter_requirements:
-  num_slices: 1
   modalities: [gene]
   data_levels: [spot]
 

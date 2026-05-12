@@ -5,7 +5,6 @@ slug: annotation-tangram
 description: Map single-cell reference annotations onto spatial transcriptomics data using Tangram deep learning alignment. Projects cell type labels from scRNA-seq reference to spatial spots/cells. Works for both cell-level and spot-level (deconvolution-like) data.
 
 filter_requirements:
-  num_slices: 1
   modalities: [gene]
   data_levels: [cell/spot]
 

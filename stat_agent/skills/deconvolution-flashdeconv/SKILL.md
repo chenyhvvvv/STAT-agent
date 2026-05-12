@@ -5,7 +5,6 @@ slug: deconvolution-flashdeconv
 description: Ultra-fast reference-based cell type deconvolution for spot-level spatial data using FlashDeconv. O(N) complexity via random sketching — much faster than RCTD or Cell2location. Pure Python, no GPU needed.
 
 filter_requirements:
-  num_slices: 1
   modalities: [gene]
   data_levels: [spot]
 

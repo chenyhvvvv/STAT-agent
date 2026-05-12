@@ -5,7 +5,6 @@ slug: trajectory-pseudotime
 description: Infer cell developmental trajectories and pseudotime ordering using expression-based methods. Palantir uses diffusion maps and random walks for branching trajectories. DPT (Diffusion Pseudotime) is a lightweight alternative using scanpy. No RNA velocity data required.
 
 filter_requirements:
-  num_slices: 1
   modalities: [gene]
   data_levels: [cell]
 

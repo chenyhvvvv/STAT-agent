@@ -5,7 +5,6 @@ slug: svg-spatialde
 description: Identify spatially variable genes using SpatialDE Gaussian process regression. Decomposes gene expression variance into spatial and non-spatial components to find genes with significant spatial patterns. Uses official NaiveDE preprocessing workflow with Storey q-value FDR correction.
 
 filter_requirements:
-  num_slices: 1
   modalities: [gene]
   data_levels: [cell/spot]
 

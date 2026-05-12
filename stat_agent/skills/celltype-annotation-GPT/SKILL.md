@@ -5,7 +5,6 @@ slug: celltype-annotation-fast
 description: Annotate cell types using unsupervised clustering, marker genes, and LLM-based annotation. Fast alternative to reference-based methods.
 
 filter_requirements:
-  num_slices: 1
   modalities: [gene]
   data_levels: [cell]
 
